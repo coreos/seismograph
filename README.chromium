@@ -1,0 +1,16 @@
+URL: git://git.debian.org/~lamont/util-linux.git
+Version: commit 717db2c8177203fe242ea35b31bc312abe9aa3c9
+License: GPL v2
+License File: files/COPYING
+
+Description: Prints the current rootfs device.
+
+Local Modification:
+
+- Removed every bit of upstream code except the part that determines the
+  rootfs device.
+- Added better error messages.
+
+
+
+
