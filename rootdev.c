@@ -1,100 +1,389 @@
-/* Taken from util-linux source. GPLv2.
- * Emits the current rootfs device.
- * Works by searching /dev recursively for a BLK device with the same device
- * number as '/'.
+/* Copyright (c) 2010 The Chromium OS Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ *
+ * Implements root device discovery via sysfs with optional bells and whistles.
  */
 
-#include <stdio.h>
-#include <err.h>
-#include <sys/types.h>
+#include "rootdev.h"
+
+#include <ctype.h>
 #include <dirent.h>
-#include <sys/stat.h>
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
+static const char *kDefaultSearchPath = "/sys/block";
+static const char *kDefaultDevPath = "/dev";
 
-static int
-find_dev_recursive(char *dirnamebuf, int number, int deviceOnly) {
-        DIR *dp;
-        struct dirent *dir;
-        struct stat s;
-        int dirnamelen = 0;
+/* Encode the root device structuring here for Chromium OS */
+static const char kActiveRoot[] = "/dev/ACTIVE_ROOT";
+static const char kRootDev[] = "/dev/ROOT";
+static const char kRootA[] = "/dev/ROOT0";
+static const char kRootB[] = "/dev/ROOT1";
 
-        if ((dp = opendir(dirnamebuf)) == NULL)
-                err(1, "can't read directory %s", dirnamebuf);
-        dirnamelen = strlen(dirnamebuf);
-        while ((dir = readdir(dp)) != NULL) {
-                if (!strcmp(dir->d_name, ".") || !strcmp(dir->d_name, ".."))
-                        continue;
-                if (dirnamelen + 1 + strlen(dir->d_name) > PATH_MAX)
-                        continue;
-                dirnamebuf[dirnamelen] = '/';
-                strcpy(dirnamebuf+dirnamelen+1, dir->d_name);
-                if (lstat(dirnamebuf, &s) < 0)
-                        continue;
-                if ((s.st_mode & S_IFMT) == S_IFBLK && s.st_rdev == number){
-                        if (deviceOnly) {
-                                int len = strlen(dirnamebuf);
-                                char c = 0;
-                                do {
-                                        c = dirnamebuf[len-1];
-                                        --len;
-                                }while(c > 0 && c < 9 && len > 0);
-                                /* arm has "p" for partition */
-                                if (dirnamebuf[len-1] == 'p')
-                                        --len;
-                                dirnamebuf[len]='\0';
-                        }
-                        return 1;
-                }
-                if ((s.st_mode & S_IFMT) == S_IFDIR &&
-                    find_dev_recursive(dirnamebuf, number, deviceOnly))
-                        return 1;
-        }
-        dirnamebuf[dirnamelen] = 0;
-        closedir(dp);
-        return 0;
+struct part_config {
+  const char *name;
+  int offset;
+};
+
+#define CHROMEOS_PRIMARY_PARTITION 3
+static const struct part_config kPrimaryPart[] = { { kRootA,    0 },
+                                                   { kRootDev, -3 },
+                                                   { kRootB,    2 } };
+#define CHROMEOS_SECONDARY_PARTITION 5
+static const struct part_config kSecondaryPart[] = { { kRootB,    0 },
+                                                     { kRootDev, -5 },
+                                                     { kRootA,   -2 } };
+
+/* The number of entries in a part_config so we could add RootC easily. */
+static const int kPartitionEntries = 3;
+
+/* Converts a file of %u:%u -> dev_t. */
+static dev_t devt_from_file(const char *file) {
+  char candidate[10];  /* TODO(wad) system-provided constant? */
+  ssize_t bytes = 0;
+  unsigned int major = 0;
+  unsigned int minor = 0;
+  dev_t dev = 0;
+  int fd = -1;
+
+  /* Never hang. Either get the data or return 0. */
+  fd = open(file, O_NONBLOCK | O_RDONLY);
+  if (fd < 0)
+    return 0;
+  bytes = read(fd, candidate, sizeof(candidate));
+  close(fd);
+
+  /* 0:0 should be considered the minimum size. */
+  if (bytes < 3)
+    return 0;
+  candidate[bytes] = 0;
+  if (sscanf(candidate, "%u:%u", &major, &minor) == 2) {
+    /* candidate's size artificially limits the size of the converted
+     * %u to safely convert to a signed int. */
+    dev = makedev(major, minor);
+  }
+  return dev;
 }
 
-void usage(){
-   printf ("rootdev \n\t-d (for device only)\n");
+/* Walks sysfs and will recurse into any directory/link that represents
+ * a block device to find sub-devices (partitions).
+ * If dev == 0, the first device in the directory will be returned. */
+static int match_sysfs_device(char *name, size_t name_len,
+                              const char *basedir, dev_t *dev) {
+  int found = -1;
+  size_t basedir_len;
+  DIR *dirp = NULL;
+  struct dirent *entry = NULL;
+  struct dirent *next = NULL;
+  char *working_path = NULL;
+  long working_path_size = 0;
+
+  if (!name || !name_len || !basedir || !dev) {
+    warnx("match_sysfs_device: invalid arguments supplied");
+    return -1;
+  }
+  basedir_len = strlen(basedir);
+  if (!basedir_len) {
+    warnx("match_sysfs_device: basedir must not be empty");
+    return -1;
+  }
+
+  errno = 0;
+  dirp = opendir(basedir);
+  if (!dirp) {
+     /* Don't complain if the directory doesn't exist. */
+     if (errno != ENOENT)
+       warn("match_sysfs_device:opendir(%s)", basedir);
+     return found;
+  }
+
+  /* Grab a platform appropriate path to work with.
+   * Ideally, this won't vary under sys/block. */
+  working_path_size = pathconf(basedir, _PC_NAME_MAX) + 1;
+  /* Fallback to PATH_MAX on any pathconf error. */
+  if (working_path_size < 0)
+    working_path_size = PATH_MAX;
+
+  working_path = malloc(working_path_size);
+  if (!working_path) {
+    warn("malloc(dirent)");
+    closedir(dirp);
+    return found;
+  }
+
+  /* Allocate a properly sized entry. */
+  entry = malloc(offsetof(struct dirent, d_name) + working_path_size);
+  if (!entry) {
+    warn("malloc(dirent)");
+    free(working_path);
+    closedir(dirp);
+    return found;
+  }
+
+  while (readdir_r(dirp, entry, &next) == 0 && next) {
+    size_t candidate_len = strlen(entry->d_name);
+    size_t path_len = 0;
+    dev_t found_devt = 0;
+    /* Ignore the usual */
+    if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+      continue;
+    /* TODO(wad) determine how to best bubble up this case. */
+    if (candidate_len > name_len)
+      continue;
+    /* Only traverse directories or symlinks (to directories ideally) */
+    switch (entry->d_type) {
+    case DT_UNKNOWN:
+    case DT_DIR:
+    case DT_LNK:
+      break;
+    default:
+      continue;
+    }
+    /* Determine path to block device number */
+    path_len = snprintf(working_path, working_path_size, "%s/%s/dev",
+                        basedir, entry->d_name);
+    /* Ignore if truncation occurs. */
+    if (path_len != candidate_len + basedir_len + 5)
+      continue;
+
+    found_devt = devt_from_file(working_path);
+    /* *dev == 0 is a wildcard. */
+    if (!*dev || found_devt == *dev) {
+      snprintf(name, name_len, "%s", entry->d_name);
+      *dev = found_devt;
+      found = 1;
+      break;
+    }
+
+    /* Recurse one level for devices that may have a matching partition. */
+    if (major(found_devt) == major(*dev) && minor(*dev) > minor(found_devt)) {
+      sprintf(working_path, "%s/%s", basedir, entry->d_name);
+      found = match_sysfs_device(name, name_len, working_path, dev);
+      if (found > 0)
+        break;
+    }
+  }
+
+  free(working_path);
+  free(entry);
+  closedir(dirp);
+  return found;
 }
 
-int main(int argc, char *argv[]) {
-        struct stat s;
-        char *file = "/";
-        static char name[PATH_MAX+1];
-        int deviceOnly=0;
-        int c;
-        extern char *optarg;
-        extern int optind, optopt;
-        while ((c = getopt(argc, argv, "hd")) != -1) {
-                switch(c) {
-                case 'd':
-                        deviceOnly=1;
-                        break;
-                case 'h':
-                default:
-                        usage();
-                        return 1;
-                }
-        }
-        if (argc - optind >= 1)
-                file = argv[optind];
+const char *rootdev_get_partition(const char *dst, size_t len) {
+  const char *end = dst + strnlen(dst, len);
+  const char *part = end - 1;
+  if (!len)
+    return NULL;
 
-        if (stat(file, &s) < 0)
-                err(1, "unable to stat %s", file);
+  if (!isdigit(*part--))
+    return NULL;
 
-        if (!s.st_dev)
-                err(1, "unknown device number 0");
+  while (part > dst && isdigit(*part)) part--;
+  part++;
 
-        strcpy(name, "/dev");
+  if (part >= end)
+    return NULL;
 
-        if (!find_dev_recursive(name, s.st_dev, deviceOnly)) {
-                fprintf(stderr, "unable to find match\n");
-                return 1;
-        }
+  return part;
+}
 
-        printf("%s\n", name);
+void rootdev_strip_partition(char *dst, size_t len) {
+  char *part = (char *)rootdev_get_partition(dst, len);
+  if (!part)
+    return;
+  /* For devices that end with a digit, the kernel uses a 'p'
+   * as a separator. E.g., mmcblk1p2. */
+  if (*(part - 1) == 'p')
+    part--;
+  *part = '\0';
+}
 
-        return 0;
+int rootdev_symlink_active(const char *path) {
+  int ret = 0;
+  /* Don't overwrite an existing link. */
+  errno = 0;
+  if ((symlink(path, kActiveRoot)) && errno != EEXIST) {
+    warn("failed to symlink %s -> %s", kActiveRoot, path);
+    ret = -1;
+  }
+  return ret;
+}
+
+int rootdev_get_device(char *dst, size_t size, dev_t dev,
+                       const char *search) {
+  struct stat active_root_statbuf;
+
+  if (search == NULL)
+    search = kDefaultSearchPath;
+
+  /* Check if the -s symlink exists. */
+  if ((stat(kActiveRoot, &active_root_statbuf) == 0) &&
+      active_root_statbuf.st_rdev == dev) {
+    /* Note, if the link is not fully qualified, this won't be
+     * either. */
+    ssize_t len = readlink(kActiveRoot, dst, PATH_MAX);
+    if (len > 0) {
+      dst[len] = 0;
+      return 0;
+    }
+    /* If readlink fails or is empty, fall through */
+  }
+
+  snprintf(dst, size, "%s", search);
+  if (match_sysfs_device(dst, size, dst, &dev) <= 0) {
+    fprintf (stderr, "unable to find match\n");
+    return 1;
+  }
+
+  return 0;
+}
+
+int rootdev_get_device_slave(char *slave, size_t size, dev_t *dev,
+                             const char *device, const char *search) {
+  char dst[PATH_MAX];
+  int len = 0;
+
+  if (search == NULL)
+    search = kDefaultSearchPath;
+
+  /* So far, I've only seen top-level block devices with slaves. */
+  len = snprintf(dst, sizeof(dst), "%s/%s/slaves", search, device);
+  if (len < 0 || len != strlen(device) + strlen(search) + 8) {
+    warnx("rootdev_get_device_slave: device name too long");
+    return -1;
+  }
+  *dev = 0;
+  if (match_sysfs_device(slave, size, dst, dev) <= 0)
+    return -1;
+
+  return 0;
+}
+
+int rootdev_create_devices(const char *name, dev_t dev, bool symlink) {
+  int ret = 0;
+  unsigned int major = major(dev);
+  unsigned int minor = minor(dev);
+  int i;
+  const struct part_config *config;
+  const char *part_s = rootdev_get_partition(name, strlen(name));
+
+  if (part_s == NULL) {
+    warnx("create_devices: unable to determine partition");
+    return -1;
+  }
+
+  switch (atoi(part_s)) {
+  case CHROMEOS_PRIMARY_PARTITION:
+    config = kPrimaryPart;
+    break;
+  case CHROMEOS_SECONDARY_PARTITION:
+    config = kSecondaryPart;
+    break;
+  default:
+    warnx("create_devices: unable to determine partition: %s",
+          part_s);
+    return -1;
+  }
+
+  for (i = 0; i < kPartitionEntries; ++i) {
+    dev = makedev(major, minor + config[i].offset);
+    errno = 0;
+    if (mknod(config[i].name,
+              S_IFBLK | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
+              dev) && errno != EEXIST) {
+      warn("failed to create %s", config[i].name);
+      return -1;
+    }
+  }
+
+  if (symlink)
+    ret = rootdev_symlink_active(config[0].name);
+  return ret;
+}
+
+int rootdev_get_path(char *path, size_t size, const char *device,
+                     dev_t dev, const char *dev_path) {
+  int path_len;
+  struct stat dev_statbuf;
+
+  if (!dev_path)
+    dev_path = kDefaultDevPath;
+
+  if (!path || !size || !device)
+    return -1;
+
+  path_len = snprintf(path, size, "%s/%s", dev_path, device);
+  if (path_len != strlen(dev_path) + 1 + strlen(device))
+    return -1;
+
+  if (stat(path, &dev_statbuf) != 0)
+    return 1;
+
+  if (dev && dev != dev_statbuf.st_rdev)
+    return 2;
+
+  return 0;
+}
+
+int rootdev_wrapper(char *path, size_t size,
+                    bool full, bool strip,
+                    dev_t *dev,
+                    const char *search, const char *dev_path) {
+  int res = 0;
+  char devname[PATH_MAX];
+  if (!search)
+    search = kDefaultSearchPath;
+  if (!dev_path)
+   dev_path = kDefaultDevPath;
+  if (!dev)
+    return -1;
+
+  res = rootdev_get_device(devname, sizeof(devname), *dev, search);
+  if (res != 0)
+    return res;
+
+  if (full)
+    res = rootdev_get_device_slave(devname, sizeof(devname), dev, devname,
+                                   search);
+
+  /* TODO(wad) we should really just track the block dev, partition number, and
+   *           dev path.  When we rewrite this, we can track all the sysfs info
+   *           in the class. */
+  if (strip) {
+    /* When we strip the partition, we don't want get_path to return non-zero
+     * because of dev mismatch.  Passing in 0 tells it to not test. */
+    *dev = 0;
+    rootdev_strip_partition(devname, size);
+  }
+
+  res = rootdev_get_path(path, size, devname, *dev, dev_path);
+
+  return res;
+}
+
+int rootdev(char *path, size_t size, bool full, bool strip) {
+  struct stat root_statbuf;
+
+  /* Yields the containing dev_t in st_dev. */
+  if (stat("/", &root_statbuf) != 0)
+    return -1;
+
+  return rootdev_wrapper(path,
+                         size,
+                         full,
+                         strip,
+                         &root_statbuf.st_dev,
+                         NULL,  /* default /sys dir */
+                         NULL);  /* default /dev dir */
 }
