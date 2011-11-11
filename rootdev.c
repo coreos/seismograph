@@ -79,7 +79,7 @@ static dev_t devt_from_file(const char *file) {
  * a block device to find sub-devices (partitions).
  * If dev == 0, the first device in the directory will be returned. */
 static int match_sysfs_device(char *name, size_t name_len,
-                              const char *basedir, dev_t *dev) {
+                              const char *basedir, dev_t *dev, int depth) {
   int found = -1;
   size_t basedir_len;
   DIR *dirp = NULL;
@@ -165,10 +165,14 @@ static int match_sysfs_device(char *name, size_t name_len,
       break;
     }
 
+    /* Prevent infinite recursion on symlink loops by limiting depth. */
+    if (depth > 5)
+      break;
+
     /* Recurse one level for devices that may have a matching partition. */
     if (major(found_devt) == major(*dev) && minor(*dev) > minor(found_devt)) {
       sprintf(working_path, "%s/%s", basedir, entry->d_name);
-      found = match_sysfs_device(name, name_len, working_path, dev);
+      found = match_sysfs_device(name, name_len, working_path, dev, depth + 1);
       if (found > 0)
         break;
     }
@@ -241,7 +245,7 @@ int rootdev_get_device(char *dst, size_t size, dev_t dev,
   }
 
   snprintf(dst, size, "%s", search);
-  if (match_sysfs_device(dst, size, dst, &dev) <= 0) {
+  if (match_sysfs_device(dst, size, dst, &dev, 0) <= 0) {
     fprintf (stderr, "unable to find match\n");
     return 1;
   }
@@ -264,7 +268,7 @@ int rootdev_get_device_slave(char *slave, size_t size, dev_t *dev,
     return -1;
   }
   *dev = 0;
-  if (match_sysfs_device(slave, size, dst, dev) <= 0)
+  if (match_sysfs_device(slave, size, dst, dev, 0) <= 0)
     return -1;
 
   return 0;
