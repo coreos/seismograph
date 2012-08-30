@@ -1,4 +1,4 @@
-/* Copyright (c) 2010 The Chromium OS Authors. All rights reserved.
+/* Copyright (c) 2012 The Chromium OS Authors. All rights reserved.
  * Use of this source code is governed by a BSD-style license that can be
  * found in the LICENSE file.
  *
@@ -20,6 +20,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+/*
+ * A depth of more than about 4 slave devices
+ * will run out of kernel stack space, so setting
+ * the serach depth to 8 covers all possible cases.
+ */
+#define MAX_SLAVE_DEPTH 8
 
 static const char *kDefaultSearchPath = "/sys/block";
 static const char *kDefaultDevPath = "/dev";
@@ -75,9 +82,10 @@ static dev_t devt_from_file(const char *file) {
   return dev;
 }
 
-/* Walks sysfs and will recurse into any directory/link that represents
- * a block device to find sub-devices (partitions).
- * If dev == 0, the first device in the directory will be returned. */
+/* Walks sysfs and recurses into any directory/link that represents
+ * a block device to find sub-devices (partitions) for dev.
+ * If dev == 0, the name fo the first device in the directory will be returned.
+ * Returns the device's name in "name" */
 static int match_sysfs_device(char *name, size_t name_len,
                               const char *basedir, dev_t *dev, int depth) {
   int found = -1;
@@ -253,25 +261,42 @@ int rootdev_get_device(char *dst, size_t size, dev_t dev,
   return 0;
 }
 
-int rootdev_get_device_slave(char *slave, size_t size, dev_t *dev,
-                             const char *device, const char *search) {
+/*
+ * rootdev_get_device_slave returns results in slave which
+ * may be the original device or the name of the slave.
+ *
+ * Because slave and device may point to the same data,
+ * must be careful how they are handled because slave
+ * is modified (can't use snprintf).
+ */
+void rootdev_get_device_slave(char *slave, size_t size, dev_t *dev,
+                              const char *device, const char *search) {
   char dst[PATH_MAX];
   int len = 0;
+  int i;
 
   if (search == NULL)
     search = kDefaultSearchPath;
 
-  /* So far, I've only seen top-level block devices with slaves. */
-  len = snprintf(dst, sizeof(dst), "%s/%s/slaves", search, device);
-  if (len < 0 || len != strlen(device) + strlen(search) + 8) {
-    warnx("rootdev_get_device_slave: device name too long");
-    return -1;
+  /*
+   * With stacked device mappers, we have to chain through all the levels
+   * and find the last device. For example, verity can be stacked on bootcache
+   * that is stacked on a disk partition.
+   */
+  strncpy(slave, device, size);
+  slave[size - 1] = '\0';
+  for (i = 0; i < MAX_SLAVE_DEPTH; i++) {
+    len = snprintf(dst, sizeof(dst), "%s/%s/slaves", search, slave);
+    if (len != strlen(device) + strlen(search) + 8) {
+      warnx("rootdev_get_device_slave: device name too long");
+      return;
+    }
+    *dev = 0;
+    if (match_sysfs_device(slave, size, dst, dev, 0) <= 0) {
+      return;
+    }
   }
-  *dev = 0;
-  if (match_sysfs_device(slave, size, dst, dev, 0) <= 0)
-    return -1;
-
-  return 0;
+  warnx("slave depth greater than %d at %s", i, slave);
 }
 
 int rootdev_create_devices(const char *name, dev_t dev, bool symlink) {
@@ -358,8 +383,8 @@ int rootdev_wrapper(char *path, size_t size,
     return res;
 
   if (full)
-    res = rootdev_get_device_slave(devname, sizeof(devname), dev, devname,
-                                   search);
+    rootdev_get_device_slave(devname, sizeof(devname), dev, devname,
+                             search);
 
   /* TODO(wad) we should really just track the block dev, partition number, and
    *           dev path.  When we rewrite this, we can track all the sysfs info

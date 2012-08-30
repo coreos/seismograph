@@ -61,11 +61,10 @@ int rootdev_get_device(char *dst, size_t size, dev_t dev,
  * @device: name of the device to probe, like "sdb"
  * @search: path to search under. NULL for default.
  *
- * Returns 0 on success, non-zero on failure.
  * It is safe for @device == @slave.
  */
-int rootdev_get_device_slave(char *slave, size_t size, dev_t *dev,
-                             const char *device, const char *search);
+void rootdev_get_device_slave(char *slave, size_t size, dev_t *dev,
+                              const char *device, const char *search);
 
 /**
  * rootdev_get_path: converts a device name to a path in the device tree
