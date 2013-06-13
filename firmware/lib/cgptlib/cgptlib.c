@@ -48,7 +48,7 @@ int GptNextKernelEntry(GptData *gpt, uint64_t *start_sector, uint64_t *size)
 		for (i = gpt->current_kernel + 1;
 		     i < header->number_of_entries; i++) {
 			e = entries + i;
-			if (!IsKernelEntry(e))
+			if (!IsRoot(e))
 				continue;
 			VBDEBUG(("GptNextKernelEntry looking at same prio "
 				 "partition %d\n", i+1));

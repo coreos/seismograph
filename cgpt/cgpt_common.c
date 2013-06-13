@@ -737,6 +737,12 @@ int IsKernel(struct drive *drive, int secondary, uint32_t index) {
   return GuidEqual(&entry->type, &guid_chromeos_kernel);
 }
 
+int IsRoot(struct drive *drive, int secondary, uint32_t index) {
+  GptEntry *entry;
+  entry = GetEntry(&drive->gpt, secondary, index);
+  return GuidEqual(&entry->type, &guid_chromeos_rootfs);
+}
+
 
 #define TOSTRING(A) #A
 const char *GptError(int errnum) {

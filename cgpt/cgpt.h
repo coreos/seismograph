@@ -116,6 +116,7 @@ int IsSynonymous(const GptHeader* a, const GptHeader* b);
 
 int IsUnused(struct drive *drive, int secondary, uint32_t index);
 int IsKernel(struct drive *drive, int secondary, uint32_t index);
+int IsRoot(struct drive *drive, int secondary, uint32_t index);
 
 // For usage and error messages.
 extern const char* progname;
