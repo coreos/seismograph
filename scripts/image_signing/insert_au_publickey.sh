@@ -9,6 +9,8 @@
 # Load common constants and variables.
 . "$(dirname "$0")/common.sh"
 
+. /usr/lib/installer/chromeos-common.sh || exit 1
+
 main() {
   set -e
 
@@ -23,7 +25,9 @@ EOF
   fi
   local rootfs=$(make_temp_dir)
   local key_location="/usr/share/update_engine/"
-  mount_image_partition "$image" 3 "$rootfs"
+  locate_gpt
+  legacy_offset_size_export ${image}
+  mount_image_partition "$image" "${NUM_ROOTFS_A}" "$rootfs"
   sudo mkdir -p "$rootfs/$key_location"
   sudo cp "$pub_key" "$rootfs/$key_location/update-payload-key.pub.pem"
   sudo chown root:root "$rootfs/$key_location/update-payload-key.pub.pem"
