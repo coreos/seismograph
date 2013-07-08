@@ -586,8 +586,8 @@ static struct {
   {&guid_chromeos_reserved, "reserved", "ChromeOS reserved"},
   {&guid_efi, "efi", "EFI System Partition"},
   {&guid_unused, "unused", "Unused (nonexistent) partition"},
-  {&guid_coreos_rootfs, "rootfs", "CoreOS rootfs"},
-  {&guid_coreos_reserved, "reserved", "CoreOS reserved"},
+  {&guid_coreos_rootfs, "coreos-rootfs", "CoreOS rootfs"},
+  {&guid_coreos_reserved, "coreos-reserved", "CoreOS reserved"},
 };
 
 /* Resolves human-readable GPT type.
