@@ -22,9 +22,9 @@
 #include <unistd.h>
 
 /*
- * A depth of more than about 4 slave devices
- * will run out of kernel stack space, so setting
- * the serach depth to 8 covers all possible cases.
+ * Limit prevents endless looping to find slave.
+ * We currently have at most 2 levels, this allows
+ * for future growth.
  */
 #define MAX_SLAVE_DEPTH 8
 
@@ -283,7 +283,8 @@ void rootdev_get_device_slave(char *slave, size_t size, dev_t *dev,
    * and find the last device. For example, verity can be stacked on bootcache
    * that is stacked on a disk partition.
    */
-  strncpy(slave, device, size);
+  if (slave != device)
+    strncpy(slave, device, size);
   slave[size - 1] = '\0';
   for (i = 0; i < MAX_SLAVE_DEPTH; i++) {
     len = snprintf(dst, sizeof(dst), "%s/%s/slaves", search, slave);
