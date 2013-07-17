@@ -20,7 +20,6 @@ static int do_search(CgptNextParams *params, char *fileName) {
   int priority, tries, successful;
   int i;
 
-  // TODO: don't hard code this
   if (CGPT_OK != DriveOpen(fileName, &drive, O_RDONLY))
     return CGPT_FAILED;
 
