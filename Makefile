@@ -317,6 +317,7 @@ HOSTLIB_SRCS = \
 	cgpt/cgpt_create.c \
 	cgpt/cgpt_add.c \
 	cgpt/cgpt_boot.c \
+	cgpt/cgpt_next.c \
 	cgpt/cgpt_show.c \
 	cgpt/cgpt_repair.c \
 	cgpt/cgpt_prioritize.c \
@@ -369,6 +370,7 @@ CGPT_SRCS = \
 	cgpt/cgpt.c \
 	cgpt/cgpt_add.c \
 	cgpt/cgpt_boot.c \
+	cgpt/cgpt_next.c \
 	cgpt/cgpt_common.c \
 	cgpt/cgpt_create.c \
 	cgpt/cgpt_find.c \
@@ -378,6 +380,7 @@ CGPT_SRCS = \
 	cgpt/cgpt_show.c \
 	cgpt/cmd_add.c \
 	cgpt/cmd_boot.c \
+	cgpt/cmd_next.c \
 	cgpt/cmd_create.c \
 	cgpt/cmd_find.c \
 	cgpt/cmd_legacy.c \

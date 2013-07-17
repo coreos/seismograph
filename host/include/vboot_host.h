@@ -22,6 +22,7 @@ int CgptAdd(CgptAddParams *params);
 int CgptSetAttributes(CgptAddParams *params);
 int CgptGetPartitionDetails(CgptAddParams *params);
 int CgptBoot(CgptBootParams *params);
+int CgptNext(CgptNextParams *params);
 int CgptGetBootPartitionNumber(CgptBootParams *params);
 int CgptShow(CgptShowParams *params);
 int CgptGetNumNonEmptyPartitions(CgptShowParams *params);
