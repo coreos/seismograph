@@ -14,8 +14,15 @@
 
 static void Usage(void)
 {
-  printf("\nUsage: %s next type\n\n"
-         "Look at all of the disks and find the disk UUID we should attempt.\n\n"
+  printf("\nUsage: %s next\n\n"
+         "Look at all of the system disks and find the disk UUID we should attempt.\n"
+         "\n"
+         "The basic algorithm is to find the root partition with the highest priority\n"
+         "and either a non-zero tries field or a non-zero successful field. Successful\n"
+         "means it has been booted before and tries means it is a new update. Tries,\n"
+         "if it exists, will be decremented after executing this command.\n"
+         "\n"
+         "The intended use of this command is in the initrd 'bootengine'."
          "\n", progname);
 }
 
