@@ -52,12 +52,7 @@ int cmd_next(int argc, char *argv[]) {
     return CGPT_FAILED;
   }
 
-  if (optind >= argc) {
-    Error("missing drive argument\n");
-    return CGPT_FAILED;
-  }
-
-  params.drive_type = argv[optind];
+  // TODO: handle drive types to make this generic
 
   return CgptNext(&params);
 }
