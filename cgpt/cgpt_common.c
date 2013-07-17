@@ -914,3 +914,44 @@ void PMBRToStr(struct pmbr *pmbr, char *str, unsigned int buflen) {
     require(snprintf(str, buflen, "PMBR (Boot GUID: %s)", buf) < buflen);
   }
 }
+
+#define DEV_DIR "/dev"
+#define SYS_BLOCK_DIR "/sys/block"
+#define BUFSIZE 1024
+
+static const char *devdirs[] = { "/dev", "/devices", "/devfs", 0 };
+
+// Given basename "foo", see if we can find a whole, real device by that name.
+// This is copied from the logic in the linux utility 'findfs', although that
+// does more exhaustive searching.
+char *IsWholeDev(const char *basename) {
+  int i;
+  struct stat statbuf;
+  static char pathname[BUFSIZE];        // we'll return this.
+  char tmpname[BUFSIZE];
+
+  // It should be a block device under /dev/,
+  for (i = 0; devdirs[i]; i++) {
+    sprintf(pathname, "%s/%s", devdirs[i], basename);
+
+    if (0 != stat(pathname, &statbuf))
+      continue;
+
+    if (!S_ISBLK(statbuf.st_mode))
+      continue;
+
+    // It should have a symlink called /sys/block/*/device
+    sprintf(tmpname, "%s/%s/device", SYS_BLOCK_DIR, basename);
+
+    if (0 != lstat(tmpname, &statbuf))
+      continue;
+
+    if (!S_ISLNK(statbuf.st_mode))
+      continue;
+
+    // found it
+    return pathname;
+  }
+
+  return 0;
+}

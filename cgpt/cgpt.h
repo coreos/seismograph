@@ -40,6 +40,7 @@ struct pmbr {
 } __attribute__((packed));
 
 void PMBRToStr(struct pmbr *pmbr, char *str, unsigned int buflen);
+char *IsWholeDev(const char *basename);
 
 // Handle to the drive storing the GPT.
 struct drive {
