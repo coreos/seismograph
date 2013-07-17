@@ -71,6 +71,11 @@ typedef struct CgptPrioritizeParams {
   int orig_priority;
 } CgptPrioritizeParams;
 
+typedef struct CgptNextParams {
+  char *drive_type;
+} CgptNextParams;
+
+
 typedef struct CgptFindParams {
   char *drive_name;
   int verbose;

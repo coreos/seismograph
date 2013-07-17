@@ -138,46 +138,6 @@ static int do_search(CgptFindParams *params, char *fileName) {
 
 
 #define PROC_PARTITIONS "/proc/partitions"
-#define DEV_DIR "/dev"
-#define SYS_BLOCK_DIR "/sys/block"
-
-static const char *devdirs[] = { "/dev", "/devices", "/devfs", 0 };
-
-// Given basename "foo", see if we can find a whole, real device by that name.
-// This is copied from the logic in the linux utility 'findfs', although that
-// does more exhaustive searching.
-static char *is_wholedev(const char *basename) {
-  int i;
-  struct stat statbuf;
-  static char pathname[BUFSIZE];        // we'll return this.
-  char tmpname[BUFSIZE];
-
-  // It should be a block device under /dev/,
-  for (i = 0; devdirs[i]; i++) {
-    sprintf(pathname, "%s/%s", devdirs[i], basename);
-
-    if (0 != stat(pathname, &statbuf))
-      continue;
-
-    if (!S_ISBLK(statbuf.st_mode))
-      continue;
-
-    // It should have a symlink called /sys/block/*/device
-    sprintf(tmpname, "%s/%s/device", SYS_BLOCK_DIR, basename);
-
-    if (0 != lstat(tmpname, &statbuf))
-      continue;
-
-    if (!S_ISLNK(statbuf.st_mode))
-      continue;
-
-    // found it
-    return pathname;
-  }
-
-  return 0;
-}
-
 
 // This scans all the physical devices it can find, looking for a match. It
 // returns true if any matches were found, false otherwise.
@@ -201,7 +161,7 @@ static int scan_real_devs(CgptFindParams *params) {
     if (sscanf(line, " %d %d %llu %127[^\n ]", &ma, &mi, &sz, partname) != 4)
       continue;
 
-    if ((pathname = is_wholedev(partname))) {
+    if ((pathname = IsWholeDev(partname))) {
       if (do_search(params, pathname)) {
         found++;
       }

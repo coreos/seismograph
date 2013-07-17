@@ -40,6 +40,7 @@ struct pmbr {
 } __attribute__((packed));
 
 void PMBRToStr(struct pmbr *pmbr, char *str, unsigned int buflen);
+char *IsWholeDev(const char *basename);
 
 // Handle to the drive storing the GPT.
 struct drive {
@@ -116,6 +117,7 @@ int IsSynonymous(const GptHeader* a, const GptHeader* b);
 
 int IsUnused(struct drive *drive, int secondary, uint32_t index);
 int IsKernel(struct drive *drive, int secondary, uint32_t index);
+int IsRoot(struct drive *drive, int secondary, uint32_t index);
 
 // For usage and error messages.
 extern const char* progname;
@@ -139,6 +141,7 @@ int cmd_boot(int argc, char *argv[]);
 int cmd_find(int argc, char *argv[]);
 int cmd_prioritize(int argc, char *argv[]);
 int cmd_legacy(int argc, char *argv[]);
+int cmd_next(int argc, char *argv[]);
 
 #define ARRAY_COUNT(array) (sizeof(array)/sizeof((array)[0]))
 const char *GptError(int errnum);

@@ -28,6 +28,7 @@ struct {
   {"show", cmd_show, "Show partition table and entries"},
   {"repair", cmd_repair, "Repair damaged GPT headers and tables"},
   {"boot", cmd_boot, "Edit the PMBR sector for legacy BIOSes"},
+  {"next", cmd_next, "Get the next root GUID to boot"},
   {"find", cmd_find, "Locate a partition by its GUID"},
   {"prioritize", cmd_prioritize,
    "Reorder the priority of all kernel partitions"},
