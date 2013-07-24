@@ -98,7 +98,7 @@ main() {
 
     # Pick the right set of test-expectation data to use. The cuts
     # turn e.g. x86-foo as a well as x86-foo-pvtkeys into x86_foo.
-    local board=$(grep CHROMEOS_RELEASE_BOARD= "$rootfs/etc/lsb-release" | \
+    local board=$(grep COREOS_RELEASE_BOARD= "$rootfs/etc/lsb-release" | \
                   cut -d = -f 2 | cut -d - -f 1,2 --output-delimiter=_)
     eval "required_kparams=(\"\${required_kparams_$board[@]}\")"
     eval "required_kparams_regex=(\"\${required_kparams_regex_$board[@]}\")"

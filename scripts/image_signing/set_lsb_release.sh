@@ -34,9 +34,9 @@ $ $PROG chromiumos_image.bin
 
 Dumps /etc/lsb-release from chromiumos_image.bin to stdout.
 
-$ $PROG chromiumos_image.bin CHROMEOS_RELEASE_DESCRIPTION "New description"
+$ $PROG chromiumos_image.bin COREOS_RELEASE_DESCRIPTION "New description"
 
-Sets the CHROMEOS_RELEASE_DESCRIPTION key's value to "New description"
+Sets the COREOS_RELEASE_DESCRIPTION key's value to "New description"
 in /etc/lsb-release in chromiumos_image.bin, sorts the keys and dumps
 the updated file to stdout.
 
