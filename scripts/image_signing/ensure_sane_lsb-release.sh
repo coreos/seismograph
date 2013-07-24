@@ -135,28 +135,28 @@ main() {
   # Basic syntax check first.
   lsb_syntaxcheck "$lsb" || testfail=1
 
-  lsbequals $lsb CHROMEOS_AUSERVER "$expected_auserver" || testfail=1
-  lsbequals $lsb CHROMEOS_RELEASE_NAME "$expected_release_name" || testfail=1
-  check_keyval_in_list $lsb CHROMEOS_RELEASE_TRACK \
+  lsbequals $lsb COREOS_AUSERVER "$expected_auserver" || testfail=1
+  lsbequals $lsb COREOS_RELEASE_NAME "$expected_release_name" || testfail=1
+  check_keyval_in_list $lsb COREOS_RELEASE_TRACK \
     "${expected_release_tracks[@]}" || testfail=1
 
-  if check_keyval_in_list $lsb CHROMEOS_RELEASE_BOARD \
+  if check_keyval_in_list $lsb COREOS_RELEASE_BOARD \
     "${expected_boards[@]}"; then
     # Pick the right set of test-expectation data to use. The cuts
     # turn e.g. x86-foo-pvtkeys into x86-foo.
-    local board=$(lsbval $lsb CHROMEOS_RELEASE_BOARD |
+    local board=$(lsbval $lsb COREOS_RELEASE_BOARD |
                   cut -d = -f 2 |
                   cut -d - -f 1,2)
     # a copy of the board string with '-' squished to variable-name-safe '_'.
     local boardvar=${board//-/_}
-    channel=$(lsbval $lsb CHROMEOS_RELEASE_TRACK)
+    channel=$(lsbval $lsb COREOS_RELEASE_TRACK)
     # For a canary or dogfood channel, appid maybe a different default value.
     if [ $channel = 'canary-channel' ] || [ $channel = 'dogfood-channel' ]; then
       eval "expected_appid=\"\$expected_appid_${channel%\-channel}\""
     else
       eval "expected_appid=\"\$expected_appid_$boardvar\""
     fi
-    lsbequals $lsb CHROMEOS_RELEASE_APPID "$expected_appid" || testfail=1
+    lsbequals $lsb COREOS_RELEASE_APPID "$expected_appid" || testfail=1
   else # unrecognized board
     testfail=1
   fi
