@@ -85,7 +85,7 @@
 #define NVRAM_PATH "/dev/nvram"
 
 /* Filename for legacy firmware update tries */
-#define NEED_FWUPDATE_PATH "/mnt/stateful_partition/.need_firmware_update"
+#define NEED_FWUPDATE_PATH "UNUSED_ON_COREOS"
 
 /* Filenames for PCI Vendor and Device IDs */
 #define PCI_VENDOR_ID_PATH "/sys/bus/pci/devices/0000:00:00.0/vendor"
