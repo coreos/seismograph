@@ -394,7 +394,6 @@ ALL_OBJS += ${CGPT_OBJS}
 
 # Scripts to install directly (not compiled)
 UTIL_SCRIPTS = \
-	utility/dev_debug_vboot \
 	utility/enable_dev_usb_boot \
 	utility/vbutil_what_keys
 
@@ -435,30 +434,13 @@ UTIL_BINS_STATIC := $(addprefix ${BUILD}/,${UTIL_NAMES_STATIC})
 UTIL_BINS = $(addprefix ${BUILD}/,${UTIL_NAMES})
 ALL_OBJS += $(addsuffix .o,${UTIL_BINS} ${UTIL_BINS_STATIC})
 
-
-# Scripts for signing stuff.
-SIGNING_SCRIPTS = \
-	utility/tpm-nvsize \
-	utility/chromeos-tpm-recovery
-
-# These go in a different place.
-SIGNING_SCRIPTS_DEV = \
-	scripts/image_signing/resign_firmwarefd.sh \
-	scripts/image_signing/make_dev_firmware.sh \
-	scripts/image_signing/make_dev_ssd.sh \
-	scripts/image_signing/set_gbb_flags.sh
-
-# Installed, but not made executable.
-SIGNING_COMMON = scripts/image_signing/common_minimal.sh
-
-
 # The unified firmware utility will eventually replace all the others
 FUTIL_BIN = ${BUILD}/futility/futility
 # But we still need both static (tiny) and dynamic (with openssl) versions.
 FUTIL_STATIC_BIN = ${FUTIL_BIN}_s
 
 # These are the others it will replace.
-FUTIL_OLD = bmpblk_font bmpblk_utility cgpt chromeos-tpm-recovery crossystem \
+FUTIL_OLD = bmpblk_font bmpblk_utility cgpt crossystem \
 	dev_debug_vboot dev_make_keypair dev_sign_file dumpRSAPublicKey \
 	dump_fmap dump_kernel_config eficompress efidecompress \
 	enable_dev_usb_boot gbb_utility load_kernel_test \
@@ -594,7 +576,7 @@ clean:
 	${Q}/bin/rm -rf ${BUILD}
 
 .PHONY: install
-install: cgpt_install utils_install signing_install futil_install
+install: cgpt_install utils_install futil_install
 
 # Don't delete intermediate object files
 .SECONDARY:
@@ -752,20 +734,6 @@ utils_install: ${UTIL_BINS} ${UTIL_SCRIPTS}
 	@$(PRINTF) "    INSTALL       UTILS\n"
 	${Q}mkdir -p ${UB_DIR}
 	${Q}${INSTALL} -t ${UB_DIR} ${UTIL_BINS} ${UTIL_SCRIPTS}
-
-# And some signing stuff for the target
-.PHONY: signing_install
-signing_install: ${SIGNING_SCRIPTS} ${SIGNING_SCRIPTS_DEV} ${SIGNING_COMMON}
-	@$(PRINTF) "    INSTALL       SIGNING\n"
-	${Q}mkdir -p ${UB_DIR}
-	${Q}${INSTALL} -t ${UB_DIR} ${SIGNING_SCRIPTS}
-	${Q}${INSTALL} -t ${UB_DIR} ${SIGNING_SCRIPTS_DEV}
-	${Q}${INSTALL} -t ${UB_DIR} -m 'u=rw,go=r,a-s' ${SIGNING_COMMON}
-ifneq (${VB_DIR},)
-	${Q}mkdir -p ${VB_DIR}
-	${Q}for prog in $(notdir ${SIGNING_SCRIPTS_DEV}); do \
-		ln -sf "${FT_DIR}/futility" "${VB_DIR}/$$prog"; done
-endif
 
 # ----------------------------------------------------------------------------
 # new Firmware Utility
