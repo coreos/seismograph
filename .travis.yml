@@ -1,0 +1,5 @@
+language: c
+install:
+ - sudo apt-get update -qq
+ - sudo apt-get install -qq libssl-dev uuid-dev liblzma-dev libyaml-dev libtspi-dev
+script: make runtests
