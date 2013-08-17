@@ -127,12 +127,6 @@ int IsKernelEntry(const GptEntry *e)
 	return !Memcmp(&e->type, &chromeos_kernel, sizeof(Guid));
 }
 
-int IsRootEntry(const GptEntry *e)
-{
-	static Guid coreos_root = GPT_ENT_TYPE_COREOS_ROOTFS;
-	return !Memcmp(&e->type, &coreos_root, sizeof(Guid));
-}
-
 int CheckEntries(GptEntry *entries, GptHeader *h)
 {
 	GptEntry *entry;
