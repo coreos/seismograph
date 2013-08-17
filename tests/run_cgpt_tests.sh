@@ -142,20 +142,20 @@ Y=$($CGPT show -u -i $KERN_NUM $DEV)
 echo "Test the cgpt prioritize command..."
 
 # Input: sequence of priorities
-# Output: ${DEV} has kernel partitions with the given priorities
+# Output: ${DEV} has coreos-rootfs partitions with the given priorities
 make_pri() {
   local idx=0
   $CGPT create ${DEV}
   for pri in "$@"; do
     idx=$((idx+1))
-    $CGPT add -t kernel -l "kern$idx" -b $((100 + 2 * $idx)) -s 1 -P $pri ${DEV}
+    $CGPT add -t coreos-rootfs -l "root$idx" -b $((100 + 2 * $idx)) -s 1 -P $pri ${DEV}
   done
 }
 
 # Output: returns string containing priorities of all kernels
 get_pri() {
   echo $(
-  for idx in $($CGPT find -t kernel ${DEV} | sed -e s@${DEV}@@); do
+  for idx in $($CGPT find -t coreos-rootfs ${DEV} | sed -e s@${DEV}@@); do
     $CGPT show -i $idx -P ${DEV}
   done
   )
@@ -171,7 +171,7 @@ assert_pri() {
 }
 
 
-# no kernels at all. This should do nothing.
+# no coreos-rootfs at all. This should do nothing.
 $CGPT create ${DEV}
 $CGPT add -t rootfs -b 100 -s 1 ${DEV}
 $CGPT prioritize ${DEV}
@@ -188,7 +188,7 @@ assert_pri 2 1 0
 $CGPT prioritize -i 2 ${DEV}
 assert_pri 1 2 0
 
-# lots of kernels, all same starting priority, should go to priority 1
+# lots of coreos-rootfs, all same starting priority, should go to priority 1
 make_pri   8 8 8 8 8 8 8 8 8 8 8 0 0 8
 $CGPT prioritize ${DEV}
 assert_pri 1 1 1 1 1 1 1 1 1 1 1 0 0 1
@@ -278,7 +278,7 @@ $CGPT boot -i 2 ${DEV} 2>/dev/null && error
 # These should pass
 $CGPT boot ${DEV} >/dev/null
 $CGPT show ${DEV} >/dev/null
-$CGPT find -t kernel ${DEV} >/dev/null
+$CGPT find -t coreos-rootfs ${DEV} >/dev/null
 
 echo "Done."
 
