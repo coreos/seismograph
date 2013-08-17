@@ -157,11 +157,6 @@ int IsUnusedEntry(const GptEntry *e);
 int IsKernelEntry(const GptEntry *e);
 
 /**
- * Return 1 if the entry is a CoreOS root partition, else 0.
- */
-int IsRootEntry(const GptEntry *e);
-
-/**
  * Copy the current kernel partition's UniquePartitionGuid to the dest.
  */
 void GetCurrentKernelUniqueGuid(GptData *gpt, void *dest);
