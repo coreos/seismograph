@@ -34,7 +34,7 @@ int cmd_next(int argc, char *argv[]) {
   int errorcnt = 0;
 
   opterr = 0;                     // quiet, you
-  while ((c=getopt(argc, argv, ":hi:b:p")) != -1)
+  while ((c=getopt(argc, argv, ":h")) != -1)
   {
     switch (c)
     {
@@ -58,6 +58,10 @@ int cmd_next(int argc, char *argv[]) {
   {
     Usage();
     return CGPT_FAILED;
+  }
+
+  if (optind < argc) {
+    params.drive_name = argv[optind];
   }
 
   // TODO: handle drive types to make this generic
