@@ -139,6 +139,42 @@ Y=$($CGPT show -u -i $KERN_NUM $DEV)
 [ "$X" = "$Y" ] || error
 
 
+echo "Test the cgpt next command..."
+ROOT_A=562DE070-1539-4EDF-AC33-B1028227D525
+ROOT_B=839C1172-5036-4EFE-9926-7074340D5772
+expect_next() {
+  local root=$($CGPT next $DEV)
+  [ "$root" == "$1" ] || error 1 "expected next to be $1 but got $root"
+}
+
+# Basic state, one good rootfs
+$CGPT create $DEV || error
+$CGPT add -i 1 -t coreos-rootfs -u $ROOT_A -b 100 -s 1 -P 1 -S 1 $DEV || error
+$CGPT add -i 2 -t coreos-rootfs -u $ROOT_B -b 101 -s 1 -P 0 -S 0 $DEV || error
+expect_next $ROOT_A
+expect_next $ROOT_A
+
+# Try the other order
+$CGPT add -i 1 -P 0 -S 0 $DEV || error
+$CGPT add -i 2 -P 1 -S 1 $DEV || error
+expect_next $ROOT_B
+expect_next $ROOT_B
+
+# Try B, fall back to A
+$CGPT add -i 1 -P 0 -S 1 -T 0 $DEV || error
+$CGPT add -i 2 -P 1 -S 0 -T 1 $DEV || error
+expect_next $ROOT_B
+expect_next $ROOT_A
+expect_next $ROOT_A
+
+# Try A, fall back to B
+$CGPT add -i 1 -P 1 -S 0 -T 1 $DEV || error
+$CGPT add -i 2 -P 0 -S 1 -T 0 $DEV || error
+expect_next $ROOT_A
+expect_next $ROOT_B
+expect_next $ROOT_B
+
+
 echo "Test the cgpt prioritize command..."
 
 # Input: sequence of priorities
