@@ -14,14 +14,14 @@
 char next_file_name[BUFSIZE];
 int next_priority, next_index;
 
-static int do_search(CgptNextParams *params, char *fileName) {
+static int do_search(CgptNextParams *params) {
   struct drive drive;
   uint32_t max_part;
   int gpt_retval;
   int priority, tries, successful;
   int i;
 
-  if (CGPT_OK != DriveOpen(fileName, &drive, O_RDONLY))
+  if (CGPT_OK != DriveOpen(params->drive_name, &drive, O_RDONLY))
     return CGPT_FAILED;
 
   if (GPT_SUCCESS != (gpt_retval = GptSanityCheck(&drive.gpt))) {
@@ -41,8 +41,12 @@ static int do_search(CgptNextParams *params, char *fileName) {
     successful = GetSuccessful(&drive, PRIMARY, i);
 
     if (next_index == -1 || ((priority > next_priority) && (successful || tries))) {
-      strncpy(next_file_name, fileName, BUFSIZE);
-      next_priority = priority;
+      strncpy(next_file_name, params->drive_name, BUFSIZE);
+      if (successful || tries) {
+        next_priority = priority;
+      } else {
+        next_priority = -1;
+      }
       next_index = i;
     }
   }
@@ -75,7 +79,8 @@ static int scan_real_devs(CgptNextParams *params) {
       continue;
 
     if ((pathname = IsWholeDev(partname))) {
-      do_search(params, pathname);
+      params->drive_name = pathname;
+      do_search(params);
     }
   }
 
@@ -94,7 +99,11 @@ int CgptNext(CgptNextParams *params) {
   if (params == NULL)
     return CGPT_FAILED;
 
-  scan_real_devs(params);
+  if (params->drive_name) {
+    do_search(params);
+  } else {
+    scan_real_devs(params);
+  }
 
   if (strlen(next_file_name) < 0) {
     return CGPT_FAILED;

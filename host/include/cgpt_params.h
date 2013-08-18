@@ -72,6 +72,7 @@ typedef struct CgptPrioritizeParams {
 } CgptPrioritizeParams;
 
 typedef struct CgptNextParams {
+  char *drive_name;
   char *drive_type;
 } CgptNextParams;
 
