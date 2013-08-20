@@ -58,8 +58,8 @@ static const int kPartitionEntries = 3;
 static dev_t devt_from_file(const char *file) {
   char candidate[10];  /* TODO(wad) system-provided constant? */
   ssize_t bytes = 0;
-  unsigned int major = 0;
-  unsigned int minor = 0;
+  unsigned int major_num = 0;
+  unsigned int minor_num = 0;
   dev_t dev = 0;
   int fd = -1;
 
@@ -74,10 +74,10 @@ static dev_t devt_from_file(const char *file) {
   if (bytes < 3)
     return 0;
   candidate[bytes] = 0;
-  if (sscanf(candidate, "%u:%u", &major, &minor) == 2) {
+  if (sscanf(candidate, "%u:%u", &major_num, &minor_num) == 2) {
     /* candidate's size artificially limits the size of the converted
      * %u to safely convert to a signed int. */
-    dev = makedev(major, minor);
+    dev = makedev(major_num, minor_num);
   }
   return dev;
 }
@@ -302,8 +302,8 @@ void rootdev_get_device_slave(char *slave, size_t size, dev_t *dev,
 
 int rootdev_create_devices(const char *name, dev_t dev, bool symlink) {
   int ret = 0;
-  unsigned int major = major(dev);
-  unsigned int minor = minor(dev);
+  unsigned int major_num = major(dev);
+  unsigned int minor_num = minor(dev);
   int i;
   const struct part_config *config;
   const char *part_s = rootdev_get_partition(name, strlen(name));
@@ -327,7 +327,7 @@ int rootdev_create_devices(const char *name, dev_t dev, bool symlink) {
   }
 
   for (i = 0; i < kPartitionEntries; ++i) {
-    dev = makedev(major, minor + config[i].offset);
+    dev = makedev(major_num, minor_num + config[i].offset);
     errno = 0;
     if (mknod(config[i].name,
               S_IFBLK | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,
