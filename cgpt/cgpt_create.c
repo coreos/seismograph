@@ -11,11 +11,15 @@
 
 int CgptCreate(CgptCreateParams *params) {
   struct drive drive;
+  int mode = O_RDWR;
 
   if (params == NULL)
     return CGPT_FAILED;
 
-  if (CGPT_OK != DriveOpen(params->drive_name, &drive, 0, O_RDWR))
+  if (params->create)
+    mode |= O_CREAT;
+
+  if (CGPT_OK != DriveOpen(params->drive_name, &drive, params->min_size, mode))
     return CGPT_FAILED;
 
   // Erase the data
