@@ -153,20 +153,30 @@ static int Save(const int fd, const uint8_t *buf,
 
 
 // Opens a block device or file, loads raw GPT data from it.
+// If the drive is a file or doesn't exist and min_size is not zero then
+// it will be extended to the requested size if necessary.
+// An error raised if the drive is a block device smaller than min_size.
+// min_size is specified in sectors
 // mode should be O_RDONLY or O_RDWR
+// min_size is required if mode includes O_CREAT
 //
 // Returns CGPT_FAILED if any error happens.
 // Returns CGPT_OK if success and information are stored in 'drive'. */
-int DriveOpen(const char *drive_path, struct drive *drive, int mode) {
+int DriveOpen(const char *drive_path, struct drive *drive,
+              off_t min_size, int mode) {
   struct stat stat;
 
   require(drive_path);
   require(drive);
+  if (mode & O_CREAT) {
+    require(min_size);
+    require(mode & O_RDWR);
+  }
 
   // Clear struct for proper error handling.
   memset(drive, 0, sizeof(struct drive));
 
-  drive->fd = open(drive_path, mode | O_LARGEFILE | O_NOFOLLOW);
+  drive->fd = open(drive_path, mode | O_LARGEFILE | O_NOFOLLOW, 0666);
   if (drive->fd == -1) {
     Error("Can't open %s: %s\n", drive_path, strerror(errno));
     return CGPT_FAILED;
@@ -189,6 +199,17 @@ int DriveOpen(const char *drive_path, struct drive *drive, int mode) {
   } else {
     drive->gpt.sector_bytes = 512;  /* bytes */
     drive->size = stat.st_size;
+    if ((drive->size < (min_size * 512)) && (mode & O_RDWR)) {
+      drive->size = (min_size * 512);
+      if (ftruncate(drive->fd, drive->size) < 0) {
+        Error("Can't extend %s: %s\n", drive_path, strerror(errno));
+        goto error_close;
+      }
+    }
+  }
+  if (drive->size < (min_size * drive->gpt.sector_bytes)) {
+    Error("Drive %s is smaller than minimum: %d\n", drive_path, min_size);
+    goto error_close;
   }
   if (drive->size % drive->gpt.sector_bytes) {
     Error("Media size (%llu) is not a multiple of sector size(%d)\n",
