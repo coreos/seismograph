@@ -18,11 +18,42 @@ DIR="${TEST_DIR}/cgpt_test_dir"
 warning "testing $CGPT in $DIR"
 cd "$DIR"
 
-echo "Create an empty file to use as the device..."
-NUM_SECTORS=1000
 DEV=fake_dev.bin
 rm -f ${DEV}
-dd if=/dev/zero of=${DEV} conv=notrunc bs=512 count=${NUM_SECTORS} 2>/dev/null
+
+echo "Test the cgpt create command..."
+# test basic create and extend
+$CGPT create -c -s 100 ${DEV} || error
+[ $(stat --format=%s ${DEV}) -eq $((100*512)) ] || error
+$CGPT create -c -s 200 ${DEV} || error
+[ $(stat --format=%s ${DEV}) -eq $((200*512)) ] || error
+$CGPT create -s 300 ${DEV} || error
+[ $(stat --format=%s ${DEV}) -eq $((300*512)) ] || error
+$CGPT create -s 200 ${DEV} || error
+[ $(stat --format=%s ${DEV}) -eq $((300*512)) ] || error
+
+# test argument requirements
+$CGPT create -c ${DEV} &>/dev/null && error
+
+# boy it'd be nice if dealing with block devices didn't always require root
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Skipping cgpt create tests w/ block devices (requires root)"
+else
+  rm -f ${DEV}
+  $CGPT create -c -s 100 ${DEV}
+  loop=$(losetup -f --show ${DEV}) || error
+  trap "losetup -d ${loop}" EXIT
+  $CGPT create -c -s 100 ${loop} || error
+  $CGPT create -c -s 200 ${loop} && error
+  losetup -d ${loop}
+  trap - EXIT
+fi
+
+
+echo "Create an empty file to use as the device..."
+NUM_SECTORS=1000
+rm -f ${DEV}
+$CGPT create -c -s ${NUM_SECTORS} ${DEV}
 
 
 echo "Create a bunch of partitions, using the real GUID types..."
@@ -61,8 +92,6 @@ RANDOM_SIZE=70
 RANDOM_LABEL="random stuff"
 RANDOM_GUID='2364a860-bf63-42fb-a83d-9ad3e057fcf5'
 RANDOM_NUM=6
-
-$CGPT create ${DEV}
 
 $CGPT add -b ${DATA_START} -s ${DATA_SIZE} -t ${DATA_GUID} \
   -l "${DATA_LABEL}" ${DEV}
@@ -296,26 +325,30 @@ assert_pri 15 15 13 12 14 11 10 10  9  9  8  8 7 7 6 6 5 5 4 4 3 3 2 2 1 1 1 1 1
 
 
 # Now make sure that we don't need write access if we're just looking.
-echo "Test read vs read-write access..."
-chmod 0444 ${DEV}
+if [ "$(id -u)" -eq 0 ]; then
+  echo "Skipping read vs read-write access tests (doesn't work as root)"
+else
+  echo "Test read vs read-write access..."
+  chmod 0444 ${DEV}
 
-# These should fail
-$CGPT create -z ${DEV} 2>/dev/null && error
-$CGPT add -i 2 -P 3 ${DEV} 2>/dev/null && error
-$CGPT repair ${DEV} 2>/dev/null && error
-$CGPT prioritize -i 3 ${DEV} 2>/dev/null && error
+  # These should fail
+  $CGPT create -z ${DEV} 2>/dev/null && error
+  $CGPT add -i 2 -P 3 ${DEV} 2>/dev/null && error
+  $CGPT repair ${DEV} 2>/dev/null && error
+  $CGPT prioritize -i 3 ${DEV} 2>/dev/null && error
 
-# Most 'boot' usage should fail too.
-$CGPT boot -p ${DEV} 2>/dev/null && error
-dd if=/dev/zero of=fake_mbr.bin bs=100 count=1 2>/dev/null
-$CGPT boot -b fake_mbr.bin ${DEV} 2>/dev/null && error
-$CGPT boot -i 2 ${DEV} 2>/dev/null && error
+  # Most 'boot' usage should fail too.
+  $CGPT boot -p ${DEV} 2>/dev/null && error
+  dd if=/dev/zero of=fake_mbr.bin bs=100 count=1 2>/dev/null
+  $CGPT boot -b fake_mbr.bin ${DEV} 2>/dev/null && error
+  $CGPT boot -i 2 ${DEV} 2>/dev/null && error
 
-# These should pass
-$CGPT boot ${DEV} >/dev/null
-$CGPT show ${DEV} >/dev/null
-$CGPT find -t coreos-rootfs ${DEV} >/dev/null
+  # These should pass
+  $CGPT boot ${DEV} >/dev/null
+  $CGPT show ${DEV} >/dev/null
+  $CGPT find -t coreos-rootfs ${DEV} >/dev/null
 
-echo "Done."
+  echo "Done."
+fi
 
 happy "All tests passed."

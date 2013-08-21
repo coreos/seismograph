@@ -21,7 +21,7 @@ static int do_search(CgptNextParams *params) {
   int priority, tries, successful;
   int i;
 
-  if (CGPT_OK != DriveOpen(params->drive_name, &drive, O_RDONLY))
+  if (CGPT_OK != DriveOpen(params->drive_name, &drive, 0, O_RDONLY))
     return CGPT_FAILED;
 
   if (GPT_SUCCESS != (gpt_retval = GptSanityCheck(&drive.gpt))) {
@@ -109,7 +109,7 @@ int CgptNext(CgptNextParams *params) {
     return CGPT_FAILED;
   }
 
-  if (DriveOpen(next_file_name, &drive, O_RDWR) == CGPT_OK) {
+  if (DriveOpen(next_file_name, &drive, 0, O_RDWR) == CGPT_OK) {
     if (GPT_SUCCESS != (gpt_retval = GptSanityCheck(&drive.gpt))) {
       Error("GptSanityCheck() returned %d: %s\n",
             gpt_retval, GptError(gpt_retval));

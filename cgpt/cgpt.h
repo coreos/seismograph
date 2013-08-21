@@ -52,7 +52,8 @@ struct drive {
 
 
 /* mode should be O_RDONLY or O_RDWR */
-int DriveOpen(const char *drive_path, struct drive *drive, int mode);
+int DriveOpen(const char *drive_path, struct drive *drive,
+              off_t min_size, int mode);
 int DriveClose(struct drive *drive, int update_as_needed);
 int CheckValid(const struct drive *drive);
 
