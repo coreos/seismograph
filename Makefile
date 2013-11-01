@@ -7,7 +7,7 @@ $(shell mkdir -p $(OUT))
 
 all: $(OUT)/rootdev $(OUT)/librootdev.so.1.0
 
-$(OUT)/rootdev: rootdev.c main.c
+$(OUT)/rootdev: main.c $(OUT)/librootdev.so.1.0
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ -O2 -Wall
 
 $(OUT)/librootdev.so.1.0: rootdev.c
