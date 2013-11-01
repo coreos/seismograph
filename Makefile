@@ -2,18 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-all: rootdev librootdev.so.1.0
+OUT = $(CURDIR)
+$(shell mkdir -p $(OUT))
 
-rootdev: rootdev.c main.c
+all: $(OUT)/rootdev $(OUT)/librootdev.so.1.0
+
+$(OUT)/rootdev: rootdev.c main.c
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@ -O2 -Wall
 
-librootdev.so.1.0: rootdev.c
+$(OUT)/librootdev.so.1.0: rootdev.c
 	$(CC) $(CFLAGS) $(LDFLAGS) -shared -fPIC \
-          -Wl,-soname,librootdev.so.1 $< -o $@
-	ln -s $@ librootdev.so.1
-	ln -s $@ librootdev.so
+		-Wl,-soname,librootdev.so.1 $< -o $@
+	ln -s $(@F) $(OUT)/librootdev.so.1
+	ln -s $(@F) $(OUT)/librootdev.so
 
 clean:
-	rm -f rootdev librootdev.so*
+	rm -f $(OUT)/rootdev $(OUT)/librootdev.so*
 
 .PHONY: clean
