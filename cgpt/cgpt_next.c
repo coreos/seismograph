@@ -125,7 +125,7 @@ int CgptNext(CgptNextParams *params) {
 
     // Print out the next disk to go!
     entry = GetEntry(&drive.gpt, ANY_VALID, next_index);
-    GuidToStr(&entry->unique, tmp, sizeof(tmp));
+    GuidToStrLower(&entry->unique, tmp, sizeof(tmp));
     printf("%s\n", tmp);
 
     // Write it all out
