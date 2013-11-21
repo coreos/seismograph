@@ -320,13 +320,15 @@ int DriveClose(struct drive *drive, int update_as_needed) {
  *
  * Returns CGPT_OK if parsing is successful; otherwise CGPT_FAILED.
  */
+#define GUID_FMT_UPPER "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X"
+#define GUID_FMT_LOWER "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x"
 int StrToGuid(const char *str, Guid *guid) {
   uint32_t time_low;
   uint16_t time_mid;
   uint16_t time_high_and_version;
   unsigned int chunk[11];
 
-  if (11 != sscanf(str, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+  if (11 != sscanf(str, GUID_FMT_UPPER,
                    chunk+0,
                    chunk+1,
                    chunk+2,
@@ -361,10 +363,10 @@ int StrToGuid(const char *str, Guid *guid) {
 
   return CGPT_OK;
 }
-void GuidToStr(const Guid *guid, char *str, unsigned int buflen) {
+static void GuidToStrGeneric(const char *fmt, const Guid *guid,
+                             char *str, unsigned int buflen) {
   require(buflen >= GUID_STRLEN);
-  require(snprintf(str, buflen,
-                  "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+  require(snprintf(str, buflen, fmt,
                   le32toh(guid->u.Uuid.time_low),
                   le16toh(guid->u.Uuid.time_mid),
                   le16toh(guid->u.Uuid.time_high_and_version),
@@ -373,6 +375,12 @@ void GuidToStr(const Guid *guid, char *str, unsigned int buflen) {
                   guid->u.Uuid.node[0], guid->u.Uuid.node[1],
                   guid->u.Uuid.node[2], guid->u.Uuid.node[3],
                   guid->u.Uuid.node[4], guid->u.Uuid.node[5]) == GUID_STRLEN-1);
+}
+void GuidToStrUpper(const Guid *guid, char *str, unsigned int buflen) {
+  GuidToStrGeneric(GUID_FMT_UPPER, guid, str, buflen);
+}
+void GuidToStrLower(const Guid *guid, char *str, unsigned int buflen) {
+  GuidToStrGeneric(GUID_FMT_LOWER, guid, str, buflen);
 }
 
 /* Convert possibly unterminated UTF16 string to UTF8.

@@ -39,8 +39,10 @@ int CgptLegacy(CgptLegacyParams *params);
  * '\0').
  */
 #define GUID_STRLEN 37
+#define GuidToStr GuidToStrUpper
 int StrToGuid(const char *str, Guid *guid);
-void GuidToStr(const Guid *guid, char *str, unsigned int buflen);
+void GuidToStrUpper(const Guid *guid, char *str, unsigned int buflen);
+void GuidToStrLower(const Guid *guid, char *str, unsigned int buflen);
 int GuidEqual(const Guid *guid1, const Guid *guid2);
 int GuidIsZero(const Guid *guid);
 
