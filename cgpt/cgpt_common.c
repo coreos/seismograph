@@ -601,6 +601,7 @@ const Guid guid_chromeos_reserved = GPT_ENT_TYPE_CHROMEOS_RESERVED;
 const Guid guid_efi =               GPT_ENT_TYPE_EFI;
 const Guid guid_unused =            GPT_ENT_TYPE_UNUSED;
 const Guid guid_coreos_reserved =   GPT_ENT_TYPE_COREOS_RESERVED;
+const Guid guid_coreos_resize =     GPT_ENT_TYPE_COREOS_RESIZE;
 const Guid guid_coreos_rootfs =     GPT_ENT_TYPE_COREOS_ROOTFS;
 
 static struct {
@@ -615,7 +616,9 @@ static struct {
   {&guid_chromeos_reserved, "reserved", "ChromeOS reserved"},
   {&guid_efi, "efi", "EFI System Partition"},
   {&guid_unused, "unused", "Unused (nonexistent) partition"},
+  {&guid_coreos_rootfs, "coreos-usr", "Alias for coreos-rootfs"},
   {&guid_coreos_rootfs, "coreos-rootfs", "CoreOS rootfs"},
+  {&guid_coreos_resize, "coreos-resize", "CoreOS auto-resize"},
   {&guid_coreos_reserved, "coreos-reserved", "CoreOS reserved"},
 };
 
