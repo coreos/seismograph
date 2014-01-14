@@ -60,7 +60,7 @@ echo "Create a bunch of partitions, using the real GUID types..."
 DATA_START=100
 DATA_SIZE=20
 DATA_LABEL="data stuff"
-DATA_GUID='ebd0a0a2-b9e5-4433-87c0-68b6b72699c7'
+DATA_GUID='0fc63daf-8483-4772-8e79-3d69d8477de4'
 DATA_NUM=1
 
 KERN_START=200
@@ -203,6 +203,53 @@ expect_next $ROOT_A
 expect_next $ROOT_B
 expect_next $ROOT_B
 
+echo "Verify that common GPT types have the correct GUID."
+# This list should come directly from external documentation.
+declare -A GPT_TYPES
+
+# General GPT/UEFI types.
+# See UEFI spec "5.3.3 GPT Partition Entry Array"
+# http://www.uefi.org/sites/default/files/resources/2_4_Errata_A.pdf
+GPT_TYPES[efi]="C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
+
+# MS Windows basic data
+GPT_TYPES[mswin-data]="EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"
+
+# General Linux types.
+# http://en.wikipedia.org/wiki/GUID_Partition_Table#Partition_type_GUIDs
+# http://www.freedesktop.org/software/systemd/man/systemd-gpt-auto-generator.html
+# http://www.freedesktop.org/wiki/Specifications/BootLoaderSpec/
+GPT_TYPES[linux-data]="0FC63DAF-8483-4772-8E79-3D69D8477DE4"
+GPT_TYPES[linux-swap]="0657FD6D-A4AB-43C4-84E5-0933C84B4F4F"
+GPT_TYPES[linux-boot]="BC13C2FF-59E6-4262-A352-B275FD6F7172"
+GPT_TYPES[linux-home]="933AC7E1-2EB4-4F13-B844-0E14E2AEF915"
+GPT_TYPES[linux-lvm]="E6D6D379-F507-44C2-A23C-238F2A3DF928"
+GPT_TYPES[linux-raid]="A19D880F-05FC-4D3B-A006-743F0F84911E"
+GPT_TYPES[linux-reserved]="8DA63339-0007-60C0-C436-083AC8230908"
+GPT_TYPES[data]=${GPT_TYPES[linux-data]}
+
+# Use an alternate tool for reading for verification purposes
+SGDISK=$(type -p sgdisk || echo /usr/sbin/sgdisk)
+[[ -x "${SGDISK}" ]] || SGDISK=""
+get_guid() {
+    $SGDISK --info $1 ${DEV} | awk '/^Partition GUID code:/ {print $4}'
+}
+
+if [[ -n "$SGDISK" ]]; then
+    for type_name in "${!GPT_TYPES[@]}"; do
+        type_guid="${GPT_TYPES[$type_name]}"
+        $CGPT create ${DEV}
+        $CGPT add -t $type_name -b 100 -s 1 ${DEV}
+        cgpt_guid=$(get_guid 1)
+        if [[ $cgpt_guid != $type_guid ]]; then
+            echo "$type_name should be $type_guid" >&2
+            echo "instead got $cgpt_guid" >&2
+            error "Invalid GUID for $type_name!"
+        fi
+    done
+else
+    echo "Skipping GUID tests because sgdisk wasn't found"
+fi
 
 echo "Test the cgpt prioritize command..."
 
@@ -323,13 +370,12 @@ assert_pri 13 13 14 12 15 11 10 10  9  9  8  8 7 7 6 6 5 5 4 4 3 3 2 2 1 1 1 1 1
 $CGPT prioritize -i 1 -f ${DEV}
 assert_pri 15 15 13 12 14 11 10 10  9  9  8  8 7 7 6 6 5 5 4 4 3 3 2 2 1 1 1 1 1 1 0
 
-
 # Now make sure that we don't need write access if we're just looking.
 if [ "$(id -u)" -eq 0 ]; then
   echo "Skipping read vs read-write access tests (doesn't work as root)"
 else
   echo "Test read vs read-write access..."
-  chmod 0444 ${DEV}
+  chmod 0444 ${DEV} || error
 
   # These should fail
   $CGPT create -z ${DEV} 2>/dev/null && error
@@ -339,14 +385,14 @@ else
 
   # Most 'boot' usage should fail too.
   $CGPT boot -p ${DEV} 2>/dev/null && error
-  dd if=/dev/zero of=fake_mbr.bin bs=100 count=1 2>/dev/null
+  dd if=/dev/zero of=fake_mbr.bin bs=100 count=1 2>/dev/null || error
   $CGPT boot -b fake_mbr.bin ${DEV} 2>/dev/null && error
   $CGPT boot -i 2 ${DEV} 2>/dev/null && error
 
-  # These should pass
-  $CGPT boot ${DEV} >/dev/null
-  $CGPT show ${DEV} >/dev/null
-  $CGPT find -t coreos-rootfs ${DEV} >/dev/null
+  # These shoulfd pass
+  $CGPT boot ${DEV} >/dev/null || error
+  $CGPT show ${DEV} >/dev/null || error
+  $CGPT find -t coreos-rootfs ${DEV} >/dev/null || error
 
   echo "Done."
 fi
