@@ -176,7 +176,7 @@ int DriveOpen(const char *drive_path, struct drive *drive,
   // Clear struct for proper error handling.
   memset(drive, 0, sizeof(struct drive));
 
-  drive->fd = open(drive_path, mode | O_LARGEFILE | O_NOFOLLOW, 0666);
+  drive->fd = open(drive_path, mode | O_LARGEFILE, 0666);
   if (drive->fd == -1) {
     Error("Can't open %s: %s\n", drive_path, strerror(errno));
     return CGPT_FAILED;
