@@ -377,6 +377,7 @@ CGPT_SRCS = \
 	cgpt/cgpt_legacy.c \
 	cgpt/cgpt_prioritize.c \
 	cgpt/cgpt_repair.c \
+	cgpt/cgpt_resize.c \
 	cgpt/cgpt_show.c \
 	cgpt/cmd_add.c \
 	cgpt/cmd_boot.c \
@@ -386,6 +387,7 @@ CGPT_SRCS = \
 	cgpt/cmd_legacy.c \
 	cgpt/cmd_prioritize.c \
 	cgpt/cmd_repair.c \
+	cgpt/cmd_resize.c \
 	cgpt/cmd_show.c
 
 CGPT_OBJS = ${CGPT_SRCS:%.c=${BUILD}/%.o}
@@ -694,9 +696,10 @@ ${TINYHOSTLIB}: ${TINYHOSTLIB_OBJS}
 cgpt: ${CGPT}
 
 ${CGPT_OBJS}: INCLUDES += -Ihost/include
+${CGPT_OBJS}: CFLAGS += -std=gnu99
 
 ${CGPT}: LDFLAGS += -static
-${CGPT}: LDLIBS += -luuid
+${CGPT}: LDLIBS += -lblkid -luuid
 
 ${CGPT}: ${CGPT_OBJS} ${HOSTLIB}
 	@$(PRINTF) "    LDcgpt        $(subst ${BUILD}/,,$@)\n"

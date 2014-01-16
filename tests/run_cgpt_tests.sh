@@ -74,6 +74,42 @@ $CGPT repair ${DEV} || error
 verify
 
 
+# resize requires a partitioned block device
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Skipping cgpt resize tests w/ block devices (requires root)"
+else
+  echo "Test cgpt resize w/ ext2 filesystem."
+  rm -f ${DEV}
+  $CGPT create -c -s 1000 ${DEV} || error
+  $CGPT add -i 1 -b 40 -s 900 -t data ${DEV} || error
+  # FIXME(marineam): cgpt should always write a protective MBR.
+  # the boot command should only be for making the MBR bootable.
+  $CGPT boot -p ${DEV} || error
+  loop=$(losetup -f --show --partscan ${DEV}) || error
+  trap "losetup -d ${loop}" EXIT
+  loopp1=${loop}p1
+  # double check that partitioned loop devices work and have correct size
+  [ -b $loopp1 ] || error "$loopp1 is not a block device"
+  [ $(blockdev --getsz $loop) -eq 1000 ] || error
+  [ $(blockdev --getsz $loopp1) -eq 900 ] || error
+  mkfs.ext2 $loopp1 || error
+  # this should do nothing
+  $CGPT resize $loopp1 || error
+  [ $(blockdev --getsz $loop) -eq 1000 ] || error
+  [ $(blockdev --getsz $loopp1) -eq 900 ] || error
+  # now test a real rezize, up to 4MB in sectors
+  truncate --size=$((8192 * 512)) ${DEV} || error
+  losetup --set-capacity ${loop} || error
+  [ $(blockdev --getsz $loop) -eq 8192 ] || error
+  [ $(blockdev --getsz $loopp1) -eq 900 ] || error
+  $CGPT resize $loopp1 || error
+  [ $(blockdev --getsz $loop) -eq 8192 ] || error
+  [ $(blockdev --getsz $loopp1) -gt 8000 ] || error
+  losetup -d ${loop}
+  trap - EXIT
+fi
+
+
 echo "Create an empty file to use as the device..."
 NUM_SECTORS=1000
 rm -f ${DEV}
