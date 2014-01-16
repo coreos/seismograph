@@ -50,6 +50,30 @@ else
 fi
 
 
+echo "Test that cgpt repair handles size changes"
+# Use an alternate tool for reading for verification purposes
+SGDISK=$(type -p sgdisk || echo /usr/sbin/sgdisk)
+[[ -x "${SGDISK}" ]] || SGDISK=""
+
+verify() {
+  if [[ -n "$SGDISK" ]]; then
+    $SGDISK --verify ${DEV} | grep -q "No problems found." \
+        || error "sgdisk dislikes cgpt's disk!"
+  else
+    echo "Skipping extra verification with sgdisk"
+  fi
+}
+
+rm -f ${DEV}
+$CGPT create -c -s 100 ${DEV} || error
+$CGPT boot -p ${DEV} >/dev/null || error
+verify
+
+truncate --size=+1M ${DEV}
+$CGPT repair ${DEV} || error
+verify
+
+
 echo "Create an empty file to use as the device..."
 NUM_SECTORS=1000
 rm -f ${DEV}
@@ -228,9 +252,6 @@ GPT_TYPES[linux-raid]="A19D880F-05FC-4D3B-A006-743F0F84911E"
 GPT_TYPES[linux-reserved]="8DA63339-0007-60C0-C436-083AC8230908"
 GPT_TYPES[data]=${GPT_TYPES[linux-data]}
 
-# Use an alternate tool for reading for verification purposes
-SGDISK=$(type -p sgdisk || echo /usr/sbin/sgdisk)
-[[ -x "${SGDISK}" ]] || SGDISK=""
 get_guid() {
     $SGDISK --info $1 ${DEV} | awk '/^Partition GUID code:/ {print $4}'
 }
