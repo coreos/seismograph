@@ -19,6 +19,11 @@
 #include "cgptlib_internal.h"
 #include "vboot_host.h"
 
+/* For building with linux headers < 3.6 */
+#ifndef BLKPG_RESIZE_PARTITION
+# define BLKPG_RESIZE_PARTITION 3
+#endif
+
 
 /* Find the device id for a given blkid_dev.
  * FIXME: libblkid already has this info but lacks a function to expose it.
