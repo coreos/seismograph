@@ -1125,6 +1125,105 @@ static int SanityCheckTest(void)
 	return TEST_OK;
 }
 
+/* Check that it is possible to repair after a block device is extended */
+static int DriveResizeTest(void)
+{
+	GptData *gpt = GetEmptyGptData();
+	GptHeader *h1 = (GptHeader *)gpt->primary_header;
+	GptHeader *h2 = (GptHeader *)gpt->secondary_header;
+	GptEntry *e1 = (GptEntry *)(gpt->primary_entries);
+	GptEntry *e2 = (GptEntry *)(gpt->secondary_entries);
+	uint64_t old_alt_lba = DEFAULT_DRIVE_SECTORS - 1;
+	uint64_t old_last_lba =
+		DEFAULT_DRIVE_SECTORS - 1 - GPT_ENTRIES_SECTORS - 1;
+
+	/* Double check the starting point is sane */
+	BuildTestGptData(gpt);
+	EXPECT(GPT_SUCCESS == GptSanityCheck(gpt));
+	EXPECT(MASK_BOTH == gpt->valid_headers);
+	EXPECT(MASK_BOTH == gpt->valid_entries);
+	/* Repair doesn't damage it */
+	GptRepair(gpt);
+	EXPECT(GPT_SUCCESS == GptSanityCheck(gpt));
+	EXPECT(MASK_BOTH == gpt->valid_headers);
+	EXPECT(MASK_BOTH == gpt->valid_entries);
+	EXPECT(0 == gpt->modified);
+
+	/* Most common case, primary was found and is valid.
+	 * Secondary was not found and just contains junk. */
+	BuildTestGptData(gpt);
+	Memset(h2, 0, sizeof(GptHeader));
+	Memset(e2, 0, sizeof(GptEntry));
+	gpt->drive_sectors++;
+	EXPECT(GPT_SUCCESS == GptSanityCheck(gpt));
+	/* Only primary header is passable but contains old values. */
+	EXPECT(h1->alternate_lba == old_alt_lba);
+	EXPECT(h1->last_usable_lba == old_last_lba);
+	EXPECT(MASK_PRIMARY == gpt->valid_headers);
+	EXPECT(MASK_PRIMARY == gpt->valid_entries);
+	/* Repair fixes the situation */
+	GptRepair(gpt);
+	EXPECT(GPT_SUCCESS == GptSanityCheck(gpt));
+	EXPECT(h1->alternate_lba == old_alt_lba + 1);
+	EXPECT(h1->last_usable_lba == old_last_lba + 1);
+	EXPECT(MASK_BOTH == gpt->valid_headers);
+	EXPECT(MASK_BOTH == gpt->valid_entries);
+	/* Repair required fixing both headers,
+	 * Second set of entries written just to be safe. */
+	EXPECT((GPT_MODIFIED_HEADER1 |
+		GPT_MODIFIED_HEADER2 |
+		GPT_MODIFIED_ENTRIES2) == gpt->modified);
+
+	/* Both headers read but contain old/invalid size. This seems
+	 * unlikely but possible if something moved the data without
+	 * updating the headers accordingly. */
+	BuildTestGptData(gpt);
+	gpt->drive_sectors++;
+	EXPECT(GPT_SUCCESS == GptSanityCheck(gpt));
+	/* Only primary header is passable but contains old values. */
+	EXPECT(h1->alternate_lba == old_alt_lba);
+	EXPECT(h1->last_usable_lba == old_last_lba);
+	EXPECT(MASK_PRIMARY == gpt->valid_headers);
+	/* But the contents of the entries table is still OK */
+	EXPECT(MASK_BOTH == gpt->valid_entries);
+	/* Repair fixes the situation */
+	GptRepair(gpt);
+	EXPECT(GPT_SUCCESS == GptSanityCheck(gpt));
+	EXPECT(h1->alternate_lba == old_alt_lba + 1);
+	EXPECT(h1->last_usable_lba == old_last_lba + 1);
+	EXPECT(MASK_BOTH == gpt->valid_headers);
+	EXPECT(MASK_BOTH == gpt->valid_entries);
+	/* Repair required fixing both headers,
+	 * Second set of entries written just to be safe. */
+	EXPECT((GPT_MODIFIED_HEADER1 |
+		GPT_MODIFIED_HEADER2 |
+		GPT_MODIFIED_ENTRIES2) == gpt->modified);
+
+	/* More contrived case, only primary header and secondary entries. */
+	BuildTestGptData(gpt);
+	Memset(h2, 0, sizeof(GptHeader));
+	Memset(e1, 0, sizeof(GptEntry));
+	gpt->drive_sectors++;
+	EXPECT(GPT_SUCCESS == GptSanityCheck(gpt));
+	EXPECT(h1->alternate_lba == old_alt_lba);
+	EXPECT(h1->last_usable_lba == old_last_lba);
+	EXPECT(MASK_PRIMARY == gpt->valid_headers);
+	EXPECT(MASK_SECONDARY == gpt->valid_entries);
+	GptRepair(gpt);
+	EXPECT(GPT_SUCCESS == GptSanityCheck(gpt));
+	EXPECT(h1->alternate_lba == old_alt_lba + 1);
+	EXPECT(h1->last_usable_lba == old_last_lba + 1);
+	EXPECT(MASK_BOTH == gpt->valid_headers);
+	EXPECT(MASK_BOTH == gpt->valid_entries);
+	/* Repair required fixing all headers and all entries. */
+	EXPECT((GPT_MODIFIED_HEADER1 |
+		GPT_MODIFIED_HEADER2 |
+		GPT_MODIFIED_ENTRIES1 |
+		GPT_MODIFIED_ENTRIES2) == gpt->modified);
+
+	return TEST_OK;
+}
+
 static int EntryAttributeGetSetTest(void)
 {
 	GptData *gpt = GetEmptyGptData();
@@ -1793,6 +1892,7 @@ int main(int argc, char *argv[])
 		{ TEST_CASE(TestCrc32TestVectors), },
 		{ TEST_CASE(GetKernelGuidTest), },
 		{ TEST_CASE(ErrorTextTest), },
+		{ TEST_CASE(DriveResizeTest), },
 	};
 
 	for (i = 0; i < sizeof(test_cases)/sizeof(test_cases[0]); ++i) {

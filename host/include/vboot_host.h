@@ -27,6 +27,7 @@ int CgptGetBootPartitionNumber(CgptBootParams *params);
 int CgptShow(CgptShowParams *params);
 int CgptGetNumNonEmptyPartitions(CgptShowParams *params);
 int CgptRepair(CgptRepairParams *params);
+int CgptResize(CgptResizeParams *params);
 int CgptPrioritize(CgptPrioritizeParams *params);
 void CgptFind(CgptFindParams *params);
 int CgptLegacy(CgptLegacyParams *params);

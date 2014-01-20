@@ -11,6 +11,7 @@
 enum {
   CGPT_OK = 0,
   CGPT_FAILED,
+  CGPT_NOOP,
 };
 
 typedef struct CgptCreateParams {
@@ -78,6 +79,10 @@ typedef struct CgptNextParams {
   char *drive_type;
 } CgptNextParams;
 
+typedef struct CgptResizeParams {
+  char *partition_desc;
+  uint64_t min_resize_bytes;
+} CgptResizeParams;
 
 typedef struct CgptFindParams {
   char *drive_name;

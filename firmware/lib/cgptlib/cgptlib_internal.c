@@ -279,6 +279,65 @@ int GptSanityCheck(GptData *gpt)
 	return GPT_SUCCESS;
 }
 
+static int GptRecomputeSize(GptData *gpt)
+{
+	GptHeader backup, *header;
+	uint64_t alt_lba, alt_entries_lba, last_usable_lba;
+	uint32_t was_valid;
+
+	alt_lba = gpt->drive_sectors - 1;
+	alt_entries_lba = alt_lba - GPT_ENTRIES_SECTORS;
+	last_usable_lba = alt_entries_lba - 1;
+
+	/* If the preferred header matches the above values based on the
+	 * disk size then all is good and quit. Otherwise try to update. */
+	if (MASK_PRIMARY & gpt->valid_headers) {
+		header = (GptHeader *)(gpt->primary_header);
+		if (header->alternate_lba == alt_lba &&
+		    header->last_usable_lba == last_usable_lba)
+			return GPT_SUCCESS;
+
+		Memcpy(&backup, header, sizeof(GptHeader));
+		header->alternate_lba = alt_lba;
+		header->last_usable_lba = last_usable_lba;
+		header->header_crc32 = HeaderCrc(header);
+		was_valid = MASK_PRIMARY;
+	}
+	else if (MASK_SECONDARY & gpt->valid_headers) {
+		header = (GptHeader *)(gpt->secondary_header);
+		if (header->my_lba == alt_lba &&
+		    header->entries_lba == alt_entries_lba &&
+		    header->last_usable_lba == last_usable_lba)
+			return GPT_SUCCESS;
+
+		Memcpy(&backup, header, sizeof(GptHeader));
+		header->my_lba = alt_lba;
+		header->entries_lba = alt_entries_lba;
+		header->last_usable_lba = last_usable_lba;
+		header->header_crc32 = HeaderCrc(header);
+		was_valid = MASK_SECONDARY;
+	}
+	else {
+		return GPT_ERROR_INVALID_HEADERS;
+	}
+
+	/* Hopefully the header we just updated is valid and not the other.
+	 * If that isn't give up and clean up our mess. */
+	if (GptSanityCheck(gpt) != GPT_SUCCESS ||
+	    gpt->valid_headers != was_valid) {
+		Memcpy(header, &backup, sizeof(GptHeader));
+		GptSanityCheck(gpt);
+		return GPT_ERROR_INVALID_HEADERS;
+	}
+
+	/* Write out secondary no matter what since its location changed. */
+	gpt->modified |= GPT_MODIFIED_HEADER2 | GPT_MODIFIED_ENTRIES2;
+	if (was_valid == MASK_PRIMARY)
+		gpt->modified |= GPT_MODIFIED_HEADER1;
+
+	return GPT_SUCCESS;
+}
+
 void GptRepair(GptData *gpt)
 {
 	GptHeader *header1 = (GptHeader *)(gpt->primary_header);
@@ -289,6 +348,10 @@ void GptRepair(GptData *gpt)
 
 	/* Need at least one good header and one good set of entries. */
 	if (MASK_NONE == gpt->valid_headers || MASK_NONE == gpt->valid_entries)
+		return;
+
+	/* Update whichever header is valid based on disk size. */
+	if (GptRecomputeSize(gpt) != GPT_SUCCESS)
 		return;
 
 	/* Repair headers if necessary */

@@ -176,7 +176,7 @@ int DriveOpen(const char *drive_path, struct drive *drive,
   // Clear struct for proper error handling.
   memset(drive, 0, sizeof(struct drive));
 
-  drive->fd = open(drive_path, mode | O_LARGEFILE | O_NOFOLLOW, 0666);
+  drive->fd = open(drive_path, mode | O_LARGEFILE, 0666);
   if (drive->fd == -1) {
     Error("Can't open %s: %s\n", drive_path, strerror(errno));
     return CGPT_FAILED;
@@ -596,26 +596,54 @@ int UTF8ToUTF16(const uint8_t *utf8, uint16_t *utf16, unsigned int maxoutput)
 const Guid guid_chromeos_firmware = GPT_ENT_TYPE_CHROMEOS_FIRMWARE;
 const Guid guid_chromeos_kernel =   GPT_ENT_TYPE_CHROMEOS_KERNEL;
 const Guid guid_chromeos_rootfs =   GPT_ENT_TYPE_CHROMEOS_ROOTFS;
-const Guid guid_linux_data =        GPT_ENT_TYPE_LINUX_DATA;
 const Guid guid_chromeos_reserved = GPT_ENT_TYPE_CHROMEOS_RESERVED;
+const Guid guid_linux_data =        GPT_ENT_TYPE_LINUX_DATA;
+const Guid guid_linux_swap =        GPT_ENT_TYPE_LINUX_SWAP;
+const Guid guid_linux_boot =        GPT_ENT_TYPE_LINUX_BOOT;
+const Guid guid_linux_home =        GPT_ENT_TYPE_LINUX_HOME;
+const Guid guid_linux_lvm =         GPT_ENT_TYPE_LINUX_LVM;
+const Guid guid_linux_raid =        GPT_ENT_TYPE_LINUX_RAID;
+const Guid guid_linux_reserved =    GPT_ENT_TYPE_LINUX_RESERVED;
 const Guid guid_efi =               GPT_ENT_TYPE_EFI;
 const Guid guid_unused =            GPT_ENT_TYPE_UNUSED;
 const Guid guid_coreos_reserved =   GPT_ENT_TYPE_COREOS_RESERVED;
+const Guid guid_coreos_resize =     GPT_ENT_TYPE_COREOS_RESIZE;
 const Guid guid_coreos_rootfs =     GPT_ENT_TYPE_COREOS_ROOTFS;
+const Guid guid_mswin_data =        GPT_ENT_TYPE_MSWIN_DATA;
 
 static struct {
   const Guid *type;
   char *name;
   char *description;
 } supported_types[] = {
+  // ChromeOS (prefix-less names for backwards compatibility)
   {&guid_chromeos_firmware, "firmware", "ChromeOS firmware"},
   {&guid_chromeos_kernel, "kernel", "ChromeOS kernel"},
   {&guid_chromeos_rootfs, "rootfs", "ChromeOS rootfs"},
-  {&guid_linux_data, "data", "Linux data"},
+  {&guid_linux_data, "data", "Alias for linux-data"},
+  {&guid_mswin_data, "chromeos-data", "Alias for mswin-data"},
   {&guid_chromeos_reserved, "reserved", "ChromeOS reserved"},
+
+  // MS Windows (data used to use this GUID instead of linux-data)
+  {&guid_mswin_data, "mswin-data", "MS Windows data"},
+
+  // GPT/UEFI standard types
   {&guid_efi, "efi", "EFI System Partition"},
   {&guid_unused, "unused", "Unused (nonexistent) partition"},
+
+  // General Linux
+  {&guid_linux_data, "linux-data", "Linux data"},
+  {&guid_linux_swap, "linux-swap", "Linux swap"},
+  {&guid_linux_boot, "linux-boot", "Linux /boot"},
+  {&guid_linux_home, "linux-home", "Linux /home"},
+  {&guid_linux_lvm, "linux-lvm", "Linux LVM"},
+  {&guid_linux_raid, "linux-raid", "Linux RAID"},
+  {&guid_linux_reserved, "linux-reserved", "Linux reserved"},
+
+  // CoreOS
+  {&guid_coreos_rootfs, "coreos-usr", "Alias for coreos-rootfs"},
   {&guid_coreos_rootfs, "coreos-rootfs", "CoreOS rootfs"},
+  {&guid_coreos_resize, "coreos-resize", "CoreOS auto-resize"},
   {&guid_coreos_reserved, "coreos-reserved", "CoreOS reserved"},
 };
 
@@ -648,7 +676,7 @@ void PrintTypes(void) {
   int i;
   printf("The partition type may also be given as one of these aliases:\n\n");
   for (i = 0; i < ARRAY_COUNT(supported_types); ++i) {
-    printf("    %-10s  %s\n", supported_types[i].name,
+    printf("    %-16s  %s\n", supported_types[i].name,
                           supported_types[i].description);
   }
   printf("\n");

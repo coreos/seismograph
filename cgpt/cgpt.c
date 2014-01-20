@@ -33,6 +33,7 @@ struct {
   {"prioritize", cmd_prioritize,
    "Reorder the priority of all kernel partitions"},
   {"legacy", cmd_legacy, "Switch between GPT and Legacy GPT"},
+  {"resize", cmd_resize, "Find and resize a partition"},
 };
 
 void Usage(void) {
