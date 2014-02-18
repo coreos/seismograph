@@ -681,7 +681,6 @@ cgpt: ${CGPT}
 ${CGPT_OBJS}: INCLUDES += -Ihost/include
 ${CGPT_OBJS}: CFLAGS += -std=gnu99
 
-${CGPT}: LDFLAGS += -static
 ${CGPT}: LDLIBS += -lblkid -luuid
 
 ${CGPT}: ${CGPT_OBJS} ${HOSTLIB}
