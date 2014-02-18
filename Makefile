@@ -491,7 +491,6 @@ TEST_NAMES = \
 	tests/sha_benchmark \
 	tests/sha_tests \
 	tests/stateful_util_tests \
-	tests/tlcl_tests \
 	tests/tpm_bootmode_tests \
 	tests/utility_string_tests \
 	tests/utility_tests \
@@ -530,22 +529,6 @@ TEST_NAMES = \
 #		verify_kernel_fuzz_driver
 #               utility/load_firmware_test
 
-# And a few more...
-TLCL_TEST_NAMES = \
-	tests/tpm_lite/tpmtest_earlyextend \
-	tests/tpm_lite/tpmtest_earlynvram \
-        tests/tpm_lite/tpmtest_earlynvram2 \
-	tests/tpm_lite/tpmtest_enable \
-	tests/tpm_lite/tpmtest_fastenable \
-	tests/tpm_lite/tpmtest_globallock \
-        tests/tpm_lite/tpmtest_redefine_unowned \
-        tests/tpm_lite/tpmtest_spaceperm \
-	tests/tpm_lite/tpmtest_testsetup \
-	tests/tpm_lite/tpmtest_timing \
-        tests/tpm_lite/tpmtest_writelimit
-
-TEST_NAMES += ${TLCL_TEST_NAMES}
-
 # Finally
 TEST_BINS = $(addprefix ${BUILD}/,${TEST_NAMES})
 ALL_OBJS += $(addsuffix .o,${TEST_BINS})
@@ -559,7 +542,7 @@ TEST_KEYS = ${SRC_RUN}/tests/testkeys
 
 # Create output directories if necessary.  Do this via explicit shell commands
 # so it happens before trying to generate/include dependencies.
-SUBDIRS := firmware host cgpt utility futility tests tests/tpm_lite
+SUBDIRS := firmware host cgpt utility futility tests
 _dir_create := $(foreach d, \
 	$(shell find ${SUBDIRS} -name '*.c' -exec  dirname {} \; | sort -u), \
 	$(shell [ -d ${BUILD}/${d} ] || mkdir -p ${BUILD}/${d}))
@@ -769,22 +752,6 @@ ${FUTIL_STATIC_BIN} ${FUTIL_BIN}: ${HOSTLIB}
 ${FUTIL_STATIC_BIN} ${FUTIL_BIN}: LIBS = ${HOSTLIB}
 
 # ----------------------------------------------------------------------------
-# Utility to generate TLCL structure definition header file.
-
-${BUILD}/utility/tlcl_generator: CFLAGS += -fpack-struct
-
-STRUCTURES_TMP=${BUILD}/tlcl_structures.tmp
-STRUCTURES_SRC=firmware/lib/tpm_lite/include/tlcl_structures.h
-
-.PHONY: update_tlcl_structures
-update_tlcl_structures: ${BUILD}/utility/tlcl_generator
-	@$(PRINTF) "    Rebuilding TLCL structures\n"
-	${Q}${BUILD}/utility/tlcl_generator > ${STRUCTURES_TMP}
-	${Q}cmp -s ${STRUCTURES_TMP} ${STRUCTURES_SRC} || \
-		( echo "%% Updating structures.h %%" && \
-		  cp ${STRUCTURES_TMP} ${STRUCTURES_SRC} )
-
-# ----------------------------------------------------------------------------
 # Tests
 
 .PHONY: tests
@@ -884,12 +851,6 @@ ${BUILD}/tests/rollback_index2_tests: \
 	${BUILD}/firmware/lib/rollback_index_for_test.o
 ALL_OBJS += ${BUILD}/firmware/lib/rollback_index_for_test.o
 
-${BUILD}/tests/tlcl_tests: OBJS += \
-	${BUILD}/firmware/lib/tpm_lite/tlcl_for_test.o
-${BUILD}/tests/tlcl_tests: \
-	${BUILD}/firmware/lib/tpm_lite/tlcl_for_test.o
-ALL_OBJS += ${BUILD}/firmware/lib/tpm_lite/tlcl_for_test.o
-
 ${BUILD}/tests/vboot_audio_tests: OBJS += \
 	${BUILD}/firmware/lib/vboot_audio_for_test.o
 ${BUILD}/tests/vboot_audio_tests: \
@@ -898,11 +859,6 @@ ALL_OBJS += ${BUILD}/firmware/lib/vboot_audio_for_test.o
 
 ${BUILD}/tests/rollback_index_test: INCLUDES += -I/usr/include
 ${BUILD}/tests/rollback_index_test: LIBS += -ltlcl
-
-TLCL_TEST_BINS = $(addprefix ${BUILD}/,${TLCL_TEST_NAMES})
-${TLCL_TEST_BINS}: OBJS += ${BUILD}/tests/tpm_lite/tlcl_tests.o
-${TLCL_TEST_BINS}: ${BUILD}/tests/tpm_lite/tlcl_tests.o
-ALL_OBJS += ${BUILD}/tests/tpm_lite/tlcl_tests.o
 
 ##############################################################################
 # Targets that exist just to run tests
@@ -975,7 +931,6 @@ runmisctests: test_setup
 	${RUNTEST} ${BUILD_RUN}/tests/rsa_utility_tests
 	${RUNTEST} ${BUILD_RUN}/tests/sha_tests
 	${RUNTEST} ${BUILD_RUN}/tests/stateful_util_tests
-	${RUNTEST} ${BUILD_RUN}/tests/tlcl_tests
 	${RUNTEST} ${BUILD_RUN}/tests/tpm_bootmode_tests
 	${RUNTEST} ${BUILD_RUN}/tests/utility_string_tests
 	${RUNTEST} ${BUILD_RUN}/tests/utility_tests
