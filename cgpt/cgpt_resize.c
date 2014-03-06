@@ -329,12 +329,7 @@ int CgptResize(CgptResizeParams *params) {
         goto exit;
       }
 
-      // Only ext[123] is supported.
-      if (blkid_dev_has_tag(dev, "TYPE", "ext2") ||
-          blkid_dev_has_tag(dev, "TYPE", "ext3") ||
-          blkid_dev_has_tag(dev, "TYPE", "ext4")) {
-        found_dev = dev;
-      }
+      found_dev = dev;
     }
   }
 
@@ -346,7 +341,12 @@ int CgptResize(CgptResizeParams *params) {
   if ((err = resize_partition(params, found_dev)) != CGPT_OK)
     goto exit;
 
-  err = resize_filesystem(params, found_dev);
+  // Only ext[123] filesystem resizing is supported.
+  if (blkid_dev_has_tag(found_dev, "TYPE", "ext2") ||
+      blkid_dev_has_tag(found_dev, "TYPE", "ext3") ||
+      blkid_dev_has_tag(found_dev, "TYPE", "ext4")) {
+    err = resize_filesystem(params, found_dev);
+  }
 
 exit:
   if (err == CGPT_NOOP)
