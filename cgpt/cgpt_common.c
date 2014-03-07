@@ -964,8 +964,13 @@ int GuidIsZero(const Guid *gp) {
 
 void InitPMBR(struct drive *drive) {
   memset(&drive->pmbr, 0, sizeof(drive->pmbr));
+  UpdatePMBR(drive);
+}
+
+void UpdatePMBR(struct drive *drive) {
   drive->pmbr.sig[0] = 0x55;
   drive->pmbr.sig[1] = 0xaa;
+  memset(&drive->pmbr.part, 0, sizeof(drive->pmbr.part));
   drive->pmbr.part[0].f_head = 0x00;
   drive->pmbr.part[0].f_sect = 0x02;
   drive->pmbr.part[0].f_cyl = 0x00;

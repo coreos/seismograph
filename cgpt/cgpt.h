@@ -73,6 +73,7 @@ extern const Guid guid_efi;
 extern const Guid guid_unused;
 
 void InitPMBR(struct drive *drive);
+void UpdatePMBR(struct drive *drive);
 int ReadPMBR(struct drive *drive);
 int WritePMBR(struct drive *drive);
 
