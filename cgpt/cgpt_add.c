@@ -46,6 +46,10 @@ static const char* DumpCgptAddParams(const CgptAddParams *params) {
     StrnAppend(buf, tmp, sizeof(buf));
     StrnAppend(buf, " ", sizeof(buf));
   }
+  if (params->set_legacy_bootable) {
+    snprintf(tmp, sizeof(tmp), "-B %d ", params->legacy_bootable);
+    StrnAppend(buf, tmp, sizeof(buf));
+  }
   if (params->set_successful) {
     snprintf(tmp, sizeof(tmp), "-S %d ", params->successful);
     StrnAppend(buf, tmp, sizeof(buf));
@@ -107,6 +111,8 @@ static int SetEntryAttributes(struct drive *drive,
   if (params->set_raw) {
     SetRaw(drive, PRIMARY, index, params->raw_value);
   } else {
+    if (params->set_legacy_bootable)
+      SetLegacyBootable(drive, PRIMARY, index, params->legacy_bootable);
     if (params->set_successful)
       SetSuccessful(drive, PRIMARY, index, params->successful);
     if (params->set_tries)
@@ -257,6 +263,7 @@ int CgptGetPartitionDetails(CgptAddParams *params) {
     params->raw_value = entry->attrs.whole;
   }
 
+  params->legacy_bootable = GetLegacyBootable(&drive, PRIMARY, index);
   params->successful = GetSuccessful(&drive, PRIMARY, index);
   params->tries = GetTries(&drive, PRIMARY, index);
   params->priority = GetPriority(&drive, PRIMARY, index);

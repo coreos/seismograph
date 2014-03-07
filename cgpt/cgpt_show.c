@@ -130,6 +130,8 @@ void EntryDetails(GptEntry *entry, uint32_t index, int raw) {
                        "priority=%d tries=%d successful=%d",
                        priority, tries, successful) < sizeof(contents));
       printf(PARTITION_MORE, "Attr: ", contents);
+    } else if (GetEntryLegacyBootable(entry)) {
+      printf(PARTITION_MORE, "Attr: ", "Legacy BIOS Bootable");
     }
   } else {
     char type[GUID_STRLEN], unique[GUID_STRLEN];

@@ -390,6 +390,11 @@ void GptRepair(GptData *gpt)
 	gpt->valid_entries = MASK_BOTH;
 }
 
+int GetEntryLegacyBootable(const GptEntry *e)
+{
+	return !!(e->attrs.whole & CGPT_ATTRIBUTE_LEGACY_BOOTABLE);
+}
+
 int GetEntrySuccessful(const GptEntry *e)
 {
 	return (e->attrs.fields.gpt_att & CGPT_ATTRIBUTE_SUCCESSFUL_MASK) >>
@@ -406,6 +411,14 @@ int GetEntryTries(const GptEntry *e)
 {
 	return (e->attrs.fields.gpt_att & CGPT_ATTRIBUTE_TRIES_MASK) >>
 		CGPT_ATTRIBUTE_TRIES_OFFSET;
+}
+
+void SetEntryLegacyBootable(GptEntry *e, int bootable)
+{
+	if (bootable)
+		e->attrs.whole |= CGPT_ATTRIBUTE_LEGACY_BOOTABLE;
+	else
+		e->attrs.whole &= ~CGPT_ATTRIBUTE_LEGACY_BOOTABLE;
 }
 
 void SetEntrySuccessful(GptEntry *e, int successful)

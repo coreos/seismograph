@@ -723,6 +723,21 @@ GptEntry *GetEntry(GptData *gpt, int secondary, uint32_t entry_index) {
   return (GptEntry*)(&entries[stride * entry_index]);
 }
 
+void SetLegacyBootable(struct drive *drive, int secondary,
+                       uint32_t entry_index, int bootable) {
+  GptEntry *entry;
+  entry = GetEntry(&drive->gpt, secondary, entry_index);
+  require(bootable >= 0 && bootable <= 1);
+  SetEntryLegacyBootable(entry, bootable);
+}
+
+int GetLegacyBootable(struct drive *drive, int secondary,
+                      uint32_t entry_index) {
+  GptEntry *entry;
+  entry = GetEntry(&drive->gpt, secondary, entry_index);
+  return GetEntryLegacyBootable(entry);
+}
+
 void SetPriority(struct drive *drive, int secondary, uint32_t entry_index,
                  int priority) {
   GptEntry *entry;

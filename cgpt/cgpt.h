@@ -114,6 +114,9 @@ void EntryDetails(GptEntry *entry, uint32_t index, int raw);
 
 uint32_t GetNumberOfEntries(const struct drive *drive);
 GptEntry *GetEntry(GptData *gpt, int secondary, uint32_t entry_index);
+void SetLegacyBootable(struct drive *drive, int secondary,
+                       uint32_t entry_index, int bootable);
+int GetLegacyBootable(struct drive *drive, int secondary, uint32_t entry_index);
 void SetPriority(struct drive *drive, int secondary, uint32_t entry_index,
                  int priority);
 int GetPriority(struct drive *drive, int secondary, uint32_t entry_index);
