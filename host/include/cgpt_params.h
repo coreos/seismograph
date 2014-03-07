@@ -32,7 +32,7 @@ typedef struct CgptAddParams {
   int successful;
   int tries;
   int priority;
-  uint32_t raw_value;
+  uint64_t raw_value;
   int set_begin;
   int set_size;
   int set_type;

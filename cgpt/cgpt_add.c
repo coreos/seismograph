@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define __STDC_FORMAT_MACROS
+
 #include <string.h>
+#include <inttypes.h>
 
 #define _STUB_IMPLEMENTATION_
 
@@ -56,7 +59,7 @@ static const char* DumpCgptAddParams(const CgptAddParams *params) {
     StrnAppend(buf, tmp, sizeof(buf));
   }
   if (params->set_raw) {
-    snprintf(tmp, sizeof(tmp), "-A 0x%x ", params->raw_value);
+    snprintf(tmp, sizeof(tmp), "-A 0x%" PRIx64 " ", params->raw_value);
     StrnAppend(buf, tmp, sizeof(buf));
   }
 
@@ -251,7 +254,7 @@ int CgptGetPartitionDetails(CgptAddParams *params) {
     params->size =  entry->ending_lba - entry->starting_lba + 1;
     memcpy(&params->type_guid, &entry->type, sizeof(Guid));
     memcpy(&params->unique_guid, &entry->unique, sizeof(Guid));
-    params->raw_value = entry->attrs.fields.gpt_att;
+    params->raw_value = entry->attrs.whole;
   }
 
   params->successful = GetSuccessful(&drive, PRIMARY, index);

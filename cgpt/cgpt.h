@@ -125,7 +125,7 @@ void SetSuccessful(struct drive *drive, int secondary, uint32_t entry_index,
 int GetSuccessful(struct drive *drive, int secondary, uint32_t entry_index);
 
 void SetRaw(struct drive *drive, int secondary, uint32_t entry_index,
-           uint32_t raw);
+           uint64_t raw);
 
 void UpdateAllEntries(struct drive *drive);
 
