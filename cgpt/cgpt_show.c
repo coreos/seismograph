@@ -114,7 +114,8 @@ void EntryDetails(GptEntry *entry, uint32_t index, int raw) {
     }
     GuidToStr(&entry->unique, unique, GUID_STRLEN);
     printf(PARTITION_MORE, "UUID: ", unique);
-    if (GuidEqual(&guid_chromeos_kernel, &entry->type)) {
+    if (GuidEqual(&guid_chromeos_kernel, &entry->type) ||
+        GuidEqual(&guid_coreos_rootfs, &entry->type)) {
       int tries = (entry->attrs.fields.gpt_att &
                    CGPT_ATTRIBUTE_TRIES_MASK) >>
           CGPT_ATTRIBUTE_TRIES_OFFSET;
