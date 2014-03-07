@@ -964,11 +964,15 @@ int GuidIsZero(const Guid *gp) {
 
 void PMBRToStr(struct pmbr *pmbr, char *str, unsigned int buflen) {
   char buf[GUID_STRLEN];
-  if (GuidIsZero(&pmbr->boot_guid)) {
-    require(snprintf(str, buflen, "PMBR") < buflen);
+  if (pmbr->magic[0] != 0x1d || pmbr->magic[1] != 0x9a) {
+    // Standard PMBR, no special SYSLINUX3 format.
+    require(snprintf(str, buflen, "Protective MBR") < buflen);
+  } else if (GuidIsZero(&pmbr->syslinux3.boot_guid)) {
+    require(snprintf(str, buflen, "PMBR (SYSLINUX3)") < buflen);
   } else {
-    GuidToStr(&pmbr->boot_guid, buf, sizeof(buf));
-    require(snprintf(str, buflen, "PMBR (Boot GUID: %s)", buf) < buflen);
+    GuidToStr(&pmbr->syslinux3.boot_guid, buf, sizeof(buf));
+    require(
+      snprintf(str, buflen, "PMBR (SYSLINUX3, Boot GUID: %s)", buf) < buflen);
   }
 }
 

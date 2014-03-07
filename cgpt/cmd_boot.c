@@ -12,6 +12,7 @@ static void Usage(void)
 {
   printf("\nUsage: %s boot [OPTIONS] DRIVE\n\n"
          "Edit the PMBR sector for legacy BIOSes\n\n"
+         "For use with SYSLINUX 3's gptmbr.bin only!\n\n"
          "Options:\n"
          "  -i NUM       Set bootable partition\n"
          "  -b FILE      Install bootloader code in the PMBR\n"

@@ -29,12 +29,18 @@ struct legacy_partition {
 } __attribute__((packed));
 
 
-// syslinux uses this format:
+// standard MBR format plus special SYSLINUX 3 gptmbr.bin format:
+// SYSLINUX >= 4 uses the standardized "Legacy BIOS Bootable" GPT attribute
 struct pmbr {
-  uint8_t                 bootcode[424];
-  Guid                    boot_guid;
+  union {
+    struct {
+      uint8_t               bootcode[424];
+      Guid                  boot_guid;
+    } __attribute__((packed)) syslinux3;
+    uint8_t                 bootcode[440];
+  };
   uint32_t                disk_id;
-  uint8_t                 magic[2];     // 0x1d, 0x9a
+  uint8_t                 magic[2];     // 0x1d, 0x9a for syslinux3 only
   struct legacy_partition part[4];
   uint8_t                 sig[2];       // 0x55, 0xaa
 } __attribute__((packed));

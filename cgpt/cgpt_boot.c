@@ -38,14 +38,14 @@ int CgptGetBootPartitionNumber(CgptBootParams *params) {
   }
 
   char buf[GUID_STRLEN];
-  GuidToStr(&drive.pmbr.boot_guid, buf, sizeof(buf));
+  GuidToStr(&drive.pmbr.syslinux3.boot_guid, buf, sizeof(buf));
 
   int numEntries = GetNumberOfEntries(&drive);
   int i;
   for(i = 0; i < numEntries; i++) {
       GptEntry *entry = GetEntry(&drive.gpt, ANY_VALID, i);
 
-      if (GuidEqual(&entry->unique, &drive.pmbr.boot_guid)) {
+      if (GuidEqual(&entry->unique, &drive.pmbr.syslinux3.boot_guid)) {
         params->partition = i + 1;
         retval = CGPT_OK;
         goto done;
@@ -117,7 +117,7 @@ int CgptBoot(CgptBootParams *params) {
 
     uint32_t index = params->partition - 1;
     GptEntry *entry = GetEntry(&drive.gpt, ANY_VALID, index);
-    memcpy(&drive.pmbr.boot_guid, &entry->unique, sizeof(Guid));
+    memcpy(&drive.pmbr.syslinux3.boot_guid, &entry->unique, sizeof(Guid));
   }
 
   if (params->bootfile) {
@@ -127,7 +127,8 @@ int CgptBoot(CgptBootParams *params) {
       goto done;
     }
 
-    int n = read(fd, drive.pmbr.bootcode, sizeof(drive.pmbr.bootcode));
+    int n = read(fd, drive.pmbr.syslinux3.bootcode,
+                 sizeof(drive.pmbr.syslinux3.bootcode));
     if (n < 1) {
       Error("problem reading %s: %s\n", params->bootfile, strerror(errno));
       close(fd);
@@ -138,7 +139,7 @@ int CgptBoot(CgptBootParams *params) {
   }
 
   char buf[GUID_STRLEN];
-  GuidToStr(&drive.pmbr.boot_guid, buf, sizeof(buf));
+  GuidToStr(&drive.pmbr.syslinux3.boot_guid, buf, sizeof(buf));
   printf("%s\n", buf);
 
   // Write it all out, if needed.
