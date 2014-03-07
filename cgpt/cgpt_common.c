@@ -962,6 +962,24 @@ int GuidIsZero(const Guid *gp) {
   return GuidEqual(gp, &guid_unused);
 }
 
+void InitPMBR(struct drive *drive) {
+  memset(&drive->pmbr, 0, sizeof(drive->pmbr));
+  drive->pmbr.sig[0] = 0x55;
+  drive->pmbr.sig[1] = 0xaa;
+  drive->pmbr.part[0].f_head = 0x00;
+  drive->pmbr.part[0].f_sect = 0x02;
+  drive->pmbr.part[0].f_cyl = 0x00;
+  drive->pmbr.part[0].type = 0xee;
+  drive->pmbr.part[0].l_head = 0xff;
+  drive->pmbr.part[0].l_sect = 0xff;
+  drive->pmbr.part[0].l_cyl = 0xff;
+  drive->pmbr.part[0].f_lba = htole32(1);
+  uint32_t max = 0xffffffff;
+  if (drive->gpt.drive_sectors < 0xffffffff)
+    max = drive->gpt.drive_sectors - 1;
+  drive->pmbr.part[0].num_sect = htole32(max);
+}
+
 void PMBRToStr(struct pmbr *pmbr, char *str, unsigned int buflen) {
   char buf[GUID_STRLEN];
   if (pmbr->magic[0] != 0x1d || pmbr->magic[1] != 0x9a) {

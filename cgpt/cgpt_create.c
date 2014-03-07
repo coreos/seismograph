@@ -57,6 +57,7 @@ int CgptCreate(CgptCreateParams *params) {
          drive.gpt.sector_bytes * GPT_ENTRIES_SECTORS);
   memset(drive.gpt.secondary_entries, 0,
          drive.gpt.sector_bytes * GPT_ENTRIES_SECTORS);
+  memset(&drive.pmbr, 0, sizeof(drive.pmbr));
 
   drive.gpt.modified |= (GPT_MODIFIED_HEADER1 | GPT_MODIFIED_ENTRIES1 |
                          GPT_MODIFIED_HEADER2 | GPT_MODIFIED_ENTRIES2);
@@ -66,7 +67,12 @@ int CgptCreate(CgptCreateParams *params) {
   {
     if (CGPT_OK != initialize_gpt(&drive))
       goto bad;
+
+    InitPMBR(&drive);
   }
+
+  if (CGPT_OK != WritePMBR(&drive))
+    goto bad;
 
   // Write it all out
   return DriveClose(&drive, 1);

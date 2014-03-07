@@ -72,6 +72,7 @@ extern const Guid guid_chromeos_reserved;
 extern const Guid guid_efi;
 extern const Guid guid_unused;
 
+void InitPMBR(struct drive *drive);
 int ReadPMBR(struct drive *drive);
 int WritePMBR(struct drive *drive);
 
