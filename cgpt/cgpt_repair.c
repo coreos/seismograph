@@ -18,6 +18,10 @@ int CgptRepair(CgptRepairParams *params) {
   if (CGPT_OK != DriveOpen(params->drive_name, &drive, 0, O_RDWR))
     return CGPT_FAILED;
 
+  if (CGPT_OK != ReadPMBR(&drive)) {
+    Error("Unable to read PMBR\n");
+  }
+
   int gpt_retval = GptSanityCheck(&drive.gpt);
   if (params->verbose)
     printf("GptSanityCheck() returned %d: %s\n",
@@ -32,6 +36,11 @@ int CgptRepair(CgptRepairParams *params) {
     printf("Secondary Entries is updated.\n");
   if (drive.gpt.modified & GPT_MODIFIED_HEADER2)
     printf("Secondary Header is updated.\n");
+
+  UpdatePMBR(&drive, ANY_VALID);
+  if (WritePMBR(&drive) != CGPT_OK) {
+    Error("Failed to write legacy MBR.\n");
+  }
 
   return DriveClose(&drive, 1);
 }

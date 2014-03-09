@@ -17,13 +17,9 @@
 
 struct legacy_partition {
   uint8_t  status;
-  uint8_t  f_head;
-  uint8_t  f_sect;
-  uint8_t  f_cyl;
+  uint8_t  f_chs[3];
   uint8_t  type;
-  uint8_t  l_head;
-  uint8_t  l_sect;
-  uint8_t  l_cyl;
+  uint8_t  l_chs[3];
   uint32_t f_lba;
   uint32_t num_sect;
 } __attribute__((packed));
@@ -82,8 +78,8 @@ extern const Guid guid_coreos_resize;
 extern const Guid guid_coreos_rootfs;
 extern const Guid guid_mswin_data;
 
-void InitPMBR(struct drive *drive);
-void UpdatePMBR(struct drive *drive);
+void InitPMBR(struct drive *drive, int secondary);
+void UpdatePMBR(struct drive *drive, int secondary);
 int ReadPMBR(struct drive *drive);
 int WritePMBR(struct drive *drive);
 

@@ -287,6 +287,11 @@ int CgptAdd(CgptAddParams *params) {
   if (CGPT_OK != DriveOpen(params->drive_name, &drive, 0, O_RDWR))
     return CGPT_FAILED;
 
+  if (CGPT_OK != ReadPMBR(&drive)) {
+    Error("Unable to read PMBR\n");
+    goto bad;
+  }
+
   if (CgptCheckAddValidity(&drive)) {
     goto bad;
   }
@@ -314,6 +319,12 @@ int CgptAdd(CgptAddParams *params) {
     memcpy(entry, &backup, sizeof(*entry));
     Error("%s\n", GptErrorText(rv));
     Error(DumpCgptAddParams(params));
+    goto bad;
+  }
+
+  UpdatePMBR(&drive, PRIMARY);
+  if (WritePMBR(&drive) != CGPT_OK) {
+    Error("Failed to write legacy MBR.\n");
     goto bad;
   }
 

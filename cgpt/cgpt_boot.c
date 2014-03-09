@@ -84,7 +84,7 @@ int CgptBoot(CgptBootParams *params) {
   }
 
   if (params->create_pmbr) {
-    InitPMBR(&drive);
+    InitPMBR(&drive, ANY_VALID);
     drive.pmbr.magic[0] = 0x1d;
     drive.pmbr.magic[1] = 0x9a;
   }

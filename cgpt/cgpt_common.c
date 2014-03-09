@@ -977,34 +977,106 @@ int GuidIsZero(const Guid *gp) {
   return GuidEqual(gp, &guid_unused);
 }
 
-void InitPMBR(struct drive *drive) {
+void InitPMBR(struct drive *drive, int secondary) {
   memset(&drive->pmbr, 0, sizeof(drive->pmbr));
-  UpdatePMBR(drive);
+  UpdatePMBR(drive, secondary);
 }
 
-void UpdatePMBR(struct drive *drive) {
+#define MBR_CYL 1024    // 0 - 1023
+#define MBR_HDS 255     // 0 - 254
+#define MBR_SEC 63      // 1 - 63
+static void compute_chs(uint8_t chs[3], uint64_t lba) {
+  uint32_t cyl, hds, sec;
+
+  require(lba <= UINT32_MAX);
+
+  if (lba == 0) {
+    cyl = hds = sec = 0;
+  } else if (lba > (MBR_CYL * MBR_HDS * MBR_SEC)) {
+    cyl = MBR_CYL - 1;
+    hds = MBR_HDS - 1;
+    sec = MBR_SEC;
+  } else {
+    sec = lba;
+    cyl = sec / (MBR_HDS * MBR_SEC);
+    sec = sec - cyl *  MBR_HDS * MBR_SEC;
+    hds = sec / MBR_SEC;
+    sec = sec - hds * MBR_SEC + 1;
+    // sanity check that I wrote the above correctly
+    require(cyl < MBR_CYL && hds < MBR_HDS);
+    require(1 <= sec && sec <= MBR_SEC);
+    require(lba == (((cyl * MBR_HDS) + hds) * MBR_SEC) + sec - 1);
+  }
+
+  // heads
+  chs[0] = (uint8_t)hds;
+  // upper 2 bits of cylinders, sectors
+  chs[1] = ((uint8_t)(cyl >> 2) & 0xC0) | (uint8_t)sec;
+  // lower 8 bits of cylinders
+  chs[2] = (uint8_t)cyl;
+}
+
+static void fill_part(struct legacy_partition *part, int bootable,
+                      uint64_t starting_lba, uint64_t ending_lba) {
+  compute_chs(part->f_chs, starting_lba);
+  part->f_lba = htole32((uint32_t)starting_lba);
+
+  compute_chs(part->l_chs, ending_lba);
+  part->num_sect = htole32((uint32_t)(ending_lba - starting_lba + 1));
+
+  if (bootable) {
+    part->status = 0x80;
+    part->type = 0xef;
+  } else {
+    part->status = 0x00;
+    part->type = 0xee;
+  }
+}
+
+void UpdatePMBR(struct drive *drive, int secondary) {
   drive->pmbr.sig[0] = 0x55;
   drive->pmbr.sig[1] = 0xaa;
   memset(&drive->pmbr.part, 0, sizeof(drive->pmbr.part));
-  drive->pmbr.part[0].f_head = 0x00;
-  drive->pmbr.part[0].f_sect = 0x02;
-  drive->pmbr.part[0].f_cyl = 0x00;
-  drive->pmbr.part[0].type = 0xee;
-  drive->pmbr.part[0].l_head = 0xff;
-  drive->pmbr.part[0].l_sect = 0xff;
-  drive->pmbr.part[0].l_cyl = 0xff;
-  drive->pmbr.part[0].f_lba = htole32(1);
-  uint32_t max = 0xffffffff;
-  if (drive->gpt.drive_sectors < 0xffffffff)
+
+  uint32_t max = UINT32_MAX;
+  if (drive->gpt.drive_sectors <= max)
     max = drive->gpt.drive_sectors - 1;
-  drive->pmbr.part[0].num_sect = htole32(max);
+
+  // Search for any partitions with the Legacy BIOS Bootable flag,
+  // if found then create a hybrid MBR with the partition.
+  uint32_t index;
+  for (index = 0; index < GetNumberOfEntries(drive); index++) {
+    GptEntry *entry = GetEntry(&drive->gpt, secondary, index);
+
+    if (GuidIsZero(&entry->type) || !GetEntryLegacyBootable(entry))
+      continue;
+
+    // Only create a hybrid table if the partition fits
+    if (entry->ending_lba >= max)
+      continue;
+
+    fill_part(&drive->pmbr.part[0], 0, 1, entry->starting_lba - 1);
+    fill_part(&drive->pmbr.part[1], 1, entry->starting_lba, entry->ending_lba);
+    if (entry->ending_lba < max)
+      fill_part(&drive->pmbr.part[2], 0, entry->ending_lba + 1, max);
+    return;
+  }
+
+  // No partition found for hybrid MBR, create standard protective MBR
+  fill_part(&drive->pmbr.part[0], 0, 1, max);
 }
 
 void PMBRToStr(struct pmbr *pmbr, char *str, unsigned int buflen) {
   char buf[GUID_STRLEN];
-  if (pmbr->magic[0] != 0x1d || pmbr->magic[1] != 0x9a) {
-    // Standard PMBR, no special SYSLINUX3 format.
-    require(snprintf(str, buflen, "Protective MBR") < buflen);
+  if (pmbr->sig[0] != 0x55 || pmbr->sig[1] != 0xaa) {
+    require(snprintf(str, buflen, "Unknown") < buflen);
+  } else if (pmbr->magic[0] != 0x1d || pmbr->magic[1] != 0x9a) {
+    // Standard MBR code, no special SYSLINUX3 format.
+    if (pmbr->part[1].type != 0x00) {
+      require(snprintf(str, buflen, "Hybrid MBR") < buflen);
+    } else {
+      require(snprintf(str, buflen, "Protective MBR") < buflen);
+    }
   } else if (GuidIsZero(&pmbr->syslinux3.boot_guid)) {
     require(snprintf(str, buflen, "PMBR (SYSLINUX3)") < buflen);
   } else {

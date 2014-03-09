@@ -68,7 +68,7 @@ int CgptCreate(CgptCreateParams *params) {
     if (CGPT_OK != initialize_gpt(&drive))
       goto bad;
 
-    InitPMBR(&drive);
+    InitPMBR(&drive, PRIMARY);
   }
 
   if (CGPT_OK != WritePMBR(&drive))

@@ -193,7 +193,7 @@ static int resize_partition(CgptResizeParams *params, blkid_dev dev) {
     goto nope;
   }
 
-  UpdatePMBR(&drive);
+  UpdatePMBR(&drive, PRIMARY);
   if (WritePMBR(&drive) != CGPT_OK) {
     Error("Failed to write legacy MBR.\n");
     goto nope;
