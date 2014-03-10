@@ -982,6 +982,15 @@ void InitPMBR(struct drive *drive, int secondary) {
   UpdatePMBR(drive, secondary);
 }
 
+/* Incoming support code for legacy CHS addressing and other MBR fun!
+ * References:
+ *  http://en.wikipedia.org/wiki/Master_boot_record
+ *  http://en.wikipedia.org/wiki/Cylinder-head-sector
+ *  http://en.wikipedia.org/wiki/Logical_block_addressing#CHS_conversion
+ *
+ * Code checked against gptfdisk 0.8.8
+ * See mbrpart.cc for gptfdisk's implementation.
+ */
 #define MBR_CYL 1024    // 0 - 1023
 #define MBR_HDS 255     // 0 - 254
 #define MBR_SEC 63      // 1 - 63
