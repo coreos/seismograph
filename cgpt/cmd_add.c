@@ -19,6 +19,7 @@ static void Usage(void)
          "  -t GUID      Partition Type GUID\n"
          "  -u GUID      Partition Unique ID\n"
          "  -l LABEL     Label\n"
+         "  -B NUM       set Legacy BIOS Bootable flag (0|1)\n"
          "  -S NUM       set Successful flag (0|1)\n"
          "  -T NUM       set Tries flag (0-15)\n"
          "  -P NUM       set Priority flag (0-15)\n"
@@ -40,7 +41,7 @@ int cmd_add(int argc, char *argv[]) {
   char *e = 0;
 
   opterr = 0;                     // quiet, you
-  while ((c=getopt(argc, argv, ":hi:b:s:t:u:l:S:T:P:A:")) != -1)
+  while ((c=getopt(argc, argv, ":hi:b:s:t:u:l:B:S:T:P:A:")) != -1)
   {
     switch (c)
     {
@@ -87,6 +88,19 @@ int cmd_add(int argc, char *argv[]) {
       break;
     case 'l':
       params.label = optarg;
+      break;
+    case 'B':
+      params.set_legacy_bootable = 1;
+      params.legacy_bootable = strtoul(optarg, &e, 0);
+      if (!*optarg || (e && *e))
+      {
+        Error("invalid argument to -%c: \"%s\"\n", c, optarg);
+        errorcnt++;
+      }
+      if (params.legacy_bootable < 0 || params.legacy_bootable > 1) {
+        Error("value for -%c must be between 0 and 1", c);
+        errorcnt++;
+      }
       break;
     case 'S':
       params.set_successful = 1;

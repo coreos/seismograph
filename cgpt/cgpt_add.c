@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define __STDC_FORMAT_MACROS
+
 #include <string.h>
+#include <inttypes.h>
 
 #define _STUB_IMPLEMENTATION_
 
@@ -43,6 +46,10 @@ static const char* DumpCgptAddParams(const CgptAddParams *params) {
     StrnAppend(buf, tmp, sizeof(buf));
     StrnAppend(buf, " ", sizeof(buf));
   }
+  if (params->set_legacy_bootable) {
+    snprintf(tmp, sizeof(tmp), "-B %d ", params->legacy_bootable);
+    StrnAppend(buf, tmp, sizeof(buf));
+  }
   if (params->set_successful) {
     snprintf(tmp, sizeof(tmp), "-S %d ", params->successful);
     StrnAppend(buf, tmp, sizeof(buf));
@@ -56,7 +63,7 @@ static const char* DumpCgptAddParams(const CgptAddParams *params) {
     StrnAppend(buf, tmp, sizeof(buf));
   }
   if (params->set_raw) {
-    snprintf(tmp, sizeof(tmp), "-A 0x%x ", params->raw_value);
+    snprintf(tmp, sizeof(tmp), "-A 0x%" PRIx64 " ", params->raw_value);
     StrnAppend(buf, tmp, sizeof(buf));
   }
 
@@ -104,6 +111,8 @@ static int SetEntryAttributes(struct drive *drive,
   if (params->set_raw) {
     SetRaw(drive, PRIMARY, index, params->raw_value);
   } else {
+    if (params->set_legacy_bootable)
+      SetLegacyBootable(drive, PRIMARY, index, params->legacy_bootable);
     if (params->set_successful)
       SetSuccessful(drive, PRIMARY, index, params->successful);
     if (params->set_tries)
@@ -251,9 +260,10 @@ int CgptGetPartitionDetails(CgptAddParams *params) {
     params->size =  entry->ending_lba - entry->starting_lba + 1;
     memcpy(&params->type_guid, &entry->type, sizeof(Guid));
     memcpy(&params->unique_guid, &entry->unique, sizeof(Guid));
-    params->raw_value = entry->attrs.fields.gpt_att;
+    params->raw_value = entry->attrs.whole;
   }
 
+  params->legacy_bootable = GetLegacyBootable(&drive, PRIMARY, index);
   params->successful = GetSuccessful(&drive, PRIMARY, index);
   params->tries = GetTries(&drive, PRIMARY, index);
   params->priority = GetPriority(&drive, PRIMARY, index);
@@ -276,6 +286,11 @@ int CgptAdd(CgptAddParams *params) {
 
   if (CGPT_OK != DriveOpen(params->drive_name, &drive, 0, O_RDWR))
     return CGPT_FAILED;
+
+  if (CGPT_OK != ReadPMBR(&drive)) {
+    Error("Unable to read PMBR\n");
+    goto bad;
+  }
 
   if (CgptCheckAddValidity(&drive)) {
     goto bad;
@@ -304,6 +319,12 @@ int CgptAdd(CgptAddParams *params) {
     memcpy(entry, &backup, sizeof(*entry));
     Error("%s\n", GptErrorText(rv));
     Error(DumpCgptAddParams(params));
+    goto bad;
+  }
+
+  UpdatePMBR(&drive, PRIMARY);
+  if (WritePMBR(&drive) != CGPT_OK) {
+    Error("Failed to write legacy MBR.\n");
     goto bad;
   }
 

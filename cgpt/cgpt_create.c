@@ -9,6 +9,32 @@
 #include "cgptlib_internal.h"
 #include "vboot_host.h"
 
+static int initialize_gpt(struct drive *drive) {
+  GptHeader *h = (GptHeader *)drive->gpt.primary_header;
+  memcpy(h->signature, GPT_HEADER_SIGNATURE, GPT_HEADER_SIGNATURE_SIZE);
+  h->revision = GPT_HEADER_REVISION;
+  h->size = sizeof(GptHeader);
+  h->my_lba = 1;
+  h->alternate_lba = drive->gpt.drive_sectors - 1;
+  h->first_usable_lba = 1 + 1 + GPT_ENTRIES_SECTORS;
+  h->last_usable_lba = drive->gpt.drive_sectors - 1 - GPT_ENTRIES_SECTORS - 1;
+  if (!uuid_generator) {
+    Error("Unable to generate new GUID. uuid_generator not set.\n");
+    return CGPT_FAILED;
+  }
+  (*uuid_generator)((uint8_t *)&h->disk_uuid);
+  h->entries_lba = 2;
+  h->number_of_entries = 128;
+  h->size_of_entry = sizeof(GptEntry);
+
+  // Copy to secondary
+  RepairHeader(&drive->gpt, MASK_PRIMARY);
+
+  UpdateCrc(&drive->gpt);
+
+  return CGPT_OK;
+}
+
 int CgptCreate(CgptCreateParams *params) {
   struct drive drive;
   int mode = O_RDWR;
@@ -31,6 +57,7 @@ int CgptCreate(CgptCreateParams *params) {
          drive.gpt.sector_bytes * GPT_ENTRIES_SECTORS);
   memset(drive.gpt.secondary_entries, 0,
          drive.gpt.sector_bytes * GPT_ENTRIES_SECTORS);
+  memset(&drive.pmbr, 0, sizeof(drive.pmbr));
 
   drive.gpt.modified |= (GPT_MODIFIED_HEADER1 | GPT_MODIFIED_ENTRIES1 |
                          GPT_MODIFIED_HEADER2 | GPT_MODIFIED_ENTRIES2);
@@ -38,28 +65,14 @@ int CgptCreate(CgptCreateParams *params) {
   // Initialize a blank set
   if (!params->zap)
   {
-    GptHeader *h = (GptHeader *)drive.gpt.primary_header;
-    memcpy(h->signature, GPT_HEADER_SIGNATURE, GPT_HEADER_SIGNATURE_SIZE);
-    h->revision = GPT_HEADER_REVISION;
-    h->size = sizeof(GptHeader);
-    h->my_lba = 1;
-    h->alternate_lba = drive.gpt.drive_sectors - 1;
-    h->first_usable_lba = 1 + 1 + GPT_ENTRIES_SECTORS;
-    h->last_usable_lba = drive.gpt.drive_sectors - 1 - GPT_ENTRIES_SECTORS - 1;
-    if (!uuid_generator) {
-      Error("Unable to generate new GUID. uuid_generator not set.\n");
+    if (CGPT_OK != initialize_gpt(&drive))
       goto bad;
-    }
-    (*uuid_generator)((uint8_t *)&h->disk_uuid);
-    h->entries_lba = 2;
-    h->number_of_entries = 128;
-    h->size_of_entry = sizeof(GptEntry);
 
-    // Copy to secondary
-    RepairHeader(&drive.gpt, MASK_PRIMARY);
-
-    UpdateCrc(&drive.gpt);
+    InitPMBR(&drive, PRIMARY);
   }
+
+  if (CGPT_OK != WritePMBR(&drive))
+    goto bad;
 
   // Write it all out
   return DriveClose(&drive, 1);

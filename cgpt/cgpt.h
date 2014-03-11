@@ -17,24 +17,26 @@
 
 struct legacy_partition {
   uint8_t  status;
-  uint8_t  f_head;
-  uint8_t  f_sect;
-  uint8_t  f_cyl;
+  uint8_t  f_chs[3];
   uint8_t  type;
-  uint8_t  l_head;
-  uint8_t  l_sect;
-  uint8_t  l_cyl;
+  uint8_t  l_chs[3];
   uint32_t f_lba;
   uint32_t num_sect;
 } __attribute__((packed));
 
 
-// syslinux uses this format:
+// standard MBR format plus special SYSLINUX 3 gptmbr.bin format:
+// SYSLINUX >= 4 uses the standardized "Legacy BIOS Bootable" GPT attribute
 struct pmbr {
-  uint8_t                 bootcode[424];
-  Guid                    boot_guid;
+  union {
+    struct {
+      uint8_t               bootcode[424];
+      Guid                  boot_guid;
+    } __attribute__((packed)) syslinux3;
+    uint8_t                 bootcode[440];
+  };
   uint32_t                disk_id;
-  uint8_t                 magic[2];     // 0x1d, 0x9a
+  uint8_t                 magic[2];     // 0x1d, 0x9a for syslinux3 only
   struct legacy_partition part[4];
   uint8_t                 sig[2];       // 0x55, 0xaa
 } __attribute__((packed));
@@ -61,11 +63,23 @@ int CheckValid(const struct drive *drive);
 extern const Guid guid_chromeos_firmware;
 extern const Guid guid_chromeos_kernel;
 extern const Guid guid_chromeos_rootfs;
-extern const Guid guid_linux_data;
 extern const Guid guid_chromeos_reserved;
+extern const Guid guid_linux_data;
+extern const Guid guid_linux_swap;
+extern const Guid guid_linux_boot;
+extern const Guid guid_linux_home;
+extern const Guid guid_linux_lvm;
+extern const Guid guid_linux_raid;
+extern const Guid guid_linux_reserved;
 extern const Guid guid_efi;
 extern const Guid guid_unused;
+extern const Guid guid_coreos_reserved;
+extern const Guid guid_coreos_resize;
+extern const Guid guid_coreos_rootfs;
+extern const Guid guid_mswin_data;
 
+void InitPMBR(struct drive *drive, int secondary);
+void UpdatePMBR(struct drive *drive, int secondary);
 int ReadPMBR(struct drive *drive);
 int WritePMBR(struct drive *drive);
 
@@ -96,6 +110,9 @@ void EntryDetails(GptEntry *entry, uint32_t index, int raw);
 
 uint32_t GetNumberOfEntries(const struct drive *drive);
 GptEntry *GetEntry(GptData *gpt, int secondary, uint32_t entry_index);
+void SetLegacyBootable(struct drive *drive, int secondary,
+                       uint32_t entry_index, int bootable);
+int GetLegacyBootable(struct drive *drive, int secondary, uint32_t entry_index);
 void SetPriority(struct drive *drive, int secondary, uint32_t entry_index,
                  int priority);
 int GetPriority(struct drive *drive, int secondary, uint32_t entry_index);
@@ -107,7 +124,7 @@ void SetSuccessful(struct drive *drive, int secondary, uint32_t entry_index,
 int GetSuccessful(struct drive *drive, int secondary, uint32_t entry_index);
 
 void SetRaw(struct drive *drive, int secondary, uint32_t entry_index,
-           uint32_t raw);
+           uint64_t raw);
 
 void UpdateAllEntries(struct drive *drive);
 

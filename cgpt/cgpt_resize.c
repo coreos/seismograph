@@ -125,6 +125,11 @@ static int resize_partition(CgptResizeParams *params, blkid_dev dev) {
   if (DriveOpen(disk_devname, &drive, 0, O_RDWR) != CGPT_OK)
     return CGPT_FAILED;
 
+  if (CGPT_OK != ReadPMBR(&drive)) {
+    Error("Unable to read PMBR\n");
+    goto nope;
+  }
+
   if (GPT_SUCCESS != (gpt_retval = GptSanityCheck(&drive.gpt))) {
     Error("GptSanityCheck() returned %d: %s\n",
           gpt_retval, GptError(gpt_retval));
@@ -185,6 +190,12 @@ static int resize_partition(CgptResizeParams *params, blkid_dev dev) {
                              entry_size_lba * drive.gpt.sector_bytes) < 0) {
     Error("Failed to notify kernel of new partition size: %s\n"
           "Leaving existing partition table in place.\n", strerror(errno));
+    goto nope;
+  }
+
+  UpdatePMBR(&drive, PRIMARY);
+  if (WritePMBR(&drive) != CGPT_OK) {
+    Error("Failed to write legacy MBR.\n");
     goto nope;
   }
 
@@ -329,12 +340,7 @@ int CgptResize(CgptResizeParams *params) {
         goto exit;
       }
 
-      // Only ext[123] is supported.
-      if (blkid_dev_has_tag(dev, "TYPE", "ext2") ||
-          blkid_dev_has_tag(dev, "TYPE", "ext3") ||
-          blkid_dev_has_tag(dev, "TYPE", "ext4")) {
-        found_dev = dev;
-      }
+      found_dev = dev;
     }
   }
 
@@ -346,7 +352,12 @@ int CgptResize(CgptResizeParams *params) {
   if ((err = resize_partition(params, found_dev)) != CGPT_OK)
     goto exit;
 
-  err = resize_filesystem(params, found_dev);
+  // Only ext[123] filesystem resizing is supported.
+  if (blkid_dev_has_tag(found_dev, "TYPE", "ext2") ||
+      blkid_dev_has_tag(found_dev, "TYPE", "ext3") ||
+      blkid_dev_has_tag(found_dev, "TYPE", "ext4")) {
+    err = resize_filesystem(params, found_dev);
+  }
 
 exit:
   if (err == CGPT_NOOP)

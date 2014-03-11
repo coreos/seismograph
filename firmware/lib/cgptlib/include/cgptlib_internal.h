@@ -26,10 +26,15 @@
  *     56  -- success
  *  55-52  -- tries
  *  51-48  -- priority
- *   47-2  -- UEFI: reserved for future use
+ *   47-3  -- UEFI: reserved for future use
+ *      2  -- UEFI: partition is legacy BIOS bootable
  *      1  -- UEFI: partition is not mapped
  *      0  -- UEFI: partition is required
  */
+#define CGPT_ATTRIBUTE_REQUIRED         (1ULL<<0)
+#define CGPT_ATTRIBUTE_NOT_MAPPED       (1ULL<<1)
+#define CGPT_ATTRIBUTE_LEGACY_BOOTABLE  (1ULL<<2)
+
 #define CGPT_ATTRIBUTE_SUCCESSFUL_OFFSET (56 - 48)
 #define CGPT_ATTRIBUTE_MAX_SUCCESSFUL (1ULL)
 #define CGPT_ATTRIBUTE_SUCCESSFUL_MASK (CGPT_ATTRIBUTE_MAX_SUCCESSFUL << \
@@ -139,9 +144,11 @@ void GptModified(GptData *gpt);
 
 /* Getters and setters for partition attribute fields. */
 
+int GetEntryLegacyBootable(const GptEntry *e);
 int GetEntrySuccessful(const GptEntry *e);
 int GetEntryPriority(const GptEntry *e);
 int GetEntryTries(const GptEntry *e);
+void SetEntryLegacyBootable(GptEntry *e, int bootable);
 void SetEntrySuccessful(GptEntry *e, int successful);
 void SetEntryPriority(GptEntry *e, int priority);
 void SetEntryTries(GptEntry *e, int tries);

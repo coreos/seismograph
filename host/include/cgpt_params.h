@@ -29,14 +29,16 @@ typedef struct CgptAddParams {
   Guid type_guid;
   Guid unique_guid;
   char *label;
+  int legacy_bootable;
   int successful;
   int tries;
   int priority;
-  uint32_t raw_value;
+  uint64_t raw_value;
   int set_begin;
   int set_size;
   int set_type;
   int set_unique;
+  int set_legacy_bootable;
   int set_successful;
   int set_tries;
   int set_priority;

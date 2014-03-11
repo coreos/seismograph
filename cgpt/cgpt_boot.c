@@ -38,14 +38,14 @@ int CgptGetBootPartitionNumber(CgptBootParams *params) {
   }
 
   char buf[GUID_STRLEN];
-  GuidToStr(&drive.pmbr.boot_guid, buf, sizeof(buf));
+  GuidToStr(&drive.pmbr.syslinux3.boot_guid, buf, sizeof(buf));
 
   int numEntries = GetNumberOfEntries(&drive);
   int i;
   for(i = 0; i < numEntries; i++) {
       GptEntry *entry = GetEntry(&drive.gpt, ANY_VALID, i);
 
-      if (GuidEqual(&entry->unique, &drive.pmbr.boot_guid)) {
+      if (GuidEqual(&entry->unique, &drive.pmbr.syslinux3.boot_guid)) {
         params->partition = i + 1;
         retval = CGPT_OK;
         goto done;
@@ -84,23 +84,9 @@ int CgptBoot(CgptBootParams *params) {
   }
 
   if (params->create_pmbr) {
+    InitPMBR(&drive, ANY_VALID);
     drive.pmbr.magic[0] = 0x1d;
     drive.pmbr.magic[1] = 0x9a;
-    drive.pmbr.sig[0] = 0x55;
-    drive.pmbr.sig[1] = 0xaa;
-    memset(&drive.pmbr.part, 0, sizeof(drive.pmbr.part));
-    drive.pmbr.part[0].f_head = 0x00;
-    drive.pmbr.part[0].f_sect = 0x02;
-    drive.pmbr.part[0].f_cyl = 0x00;
-    drive.pmbr.part[0].type = 0xee;
-    drive.pmbr.part[0].l_head = 0xff;
-    drive.pmbr.part[0].l_sect = 0xff;
-    drive.pmbr.part[0].l_cyl = 0xff;
-    drive.pmbr.part[0].f_lba = htole32(1);
-    uint32_t max = 0xffffffff;
-    if (drive.gpt.drive_sectors < 0xffffffff)
-      max = drive.gpt.drive_sectors - 1;
-    drive.pmbr.part[0].num_sect = htole32(max);
   }
 
   if (params->partition) {
@@ -117,7 +103,7 @@ int CgptBoot(CgptBootParams *params) {
 
     uint32_t index = params->partition - 1;
     GptEntry *entry = GetEntry(&drive.gpt, ANY_VALID, index);
-    memcpy(&drive.pmbr.boot_guid, &entry->unique, sizeof(Guid));
+    memcpy(&drive.pmbr.syslinux3.boot_guid, &entry->unique, sizeof(Guid));
   }
 
   if (params->bootfile) {
@@ -127,7 +113,8 @@ int CgptBoot(CgptBootParams *params) {
       goto done;
     }
 
-    int n = read(fd, drive.pmbr.bootcode, sizeof(drive.pmbr.bootcode));
+    int n = read(fd, drive.pmbr.syslinux3.bootcode,
+                 sizeof(drive.pmbr.syslinux3.bootcode));
     if (n < 1) {
       Error("problem reading %s: %s\n", params->bootfile, strerror(errno));
       close(fd);
@@ -138,7 +125,7 @@ int CgptBoot(CgptBootParams *params) {
   }
 
   char buf[GUID_STRLEN];
-  GuidToStr(&drive.pmbr.boot_guid, buf, sizeof(buf));
+  GuidToStr(&drive.pmbr.syslinux3.boot_guid, buf, sizeof(buf));
   printf("%s\n", buf);
 
   // Write it all out, if needed.

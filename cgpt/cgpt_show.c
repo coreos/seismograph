@@ -5,6 +5,7 @@
 #define __STDC_FORMAT_MACROS
 
 #include <string.h>
+#include <inttypes.h>
 
 #include "cgpt.h"
 #include "cgptlib_internal.h"
@@ -114,7 +115,8 @@ void EntryDetails(GptEntry *entry, uint32_t index, int raw) {
     }
     GuidToStr(&entry->unique, unique, GUID_STRLEN);
     printf(PARTITION_MORE, "UUID: ", unique);
-    if (GuidEqual(&guid_chromeos_kernel, &entry->type)) {
+    if (GuidEqual(&guid_chromeos_kernel, &entry->type) ||
+        GuidEqual(&guid_coreos_rootfs, &entry->type)) {
       int tries = (entry->attrs.fields.gpt_att &
                    CGPT_ATTRIBUTE_TRIES_MASK) >>
           CGPT_ATTRIBUTE_TRIES_OFFSET;
@@ -128,6 +130,8 @@ void EntryDetails(GptEntry *entry, uint32_t index, int raw) {
                        "priority=%d tries=%d successful=%d",
                        priority, tries, successful) < sizeof(contents));
       printf(PARTITION_MORE, "Attr: ", contents);
+    } else if (GetEntryLegacyBootable(entry)) {
+      printf(PARTITION_MORE, "Attr: ", "Legacy BIOS Bootable");
     }
   } else {
     char type[GUID_STRLEN], unique[GUID_STRLEN];
@@ -143,8 +147,8 @@ void EntryDetails(GptEntry *entry, uint32_t index, int raw) {
     printf(PARTITION_MORE, "Type: ", type);
     GuidToStr(&entry->unique, unique, GUID_STRLEN);
     printf(PARTITION_MORE, "UUID: ", unique);
-    require(snprintf(contents, sizeof(contents),
-                     "[%x]", entry->attrs.fields.gpt_att) < sizeof(contents));
+    require(snprintf(contents, sizeof(contents), "0x%016" PRIx64,
+                     entry->attrs.whole) < sizeof(contents));
     printf(PARTITION_MORE, "Attr: ", contents);
   }
 }
@@ -258,7 +262,7 @@ int CgptShow(CgptShowParams *params) {
         printf("%d\n", GetPriority(&drive, ANY_VALID, index));
         break;
       case 'A':
-        printf("0x%x\n", entry->attrs.fields.gpt_att);
+        printf("0x%" PRIx64 "\n", entry->attrs.whole);
         break;
       }
     } else {
