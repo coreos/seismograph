@@ -117,7 +117,7 @@ else
   echo "Test cgpt w/ partition block device"
   rm -f ${DEV}
   $CGPT create -c -s 1000 ${DEV} || error
-  $CGPT add -i 1 -b 40 -s 900 -t data -A 0 ${DEV} || error
+  $CGPT add -i 1 -b 40 -s 900 -t coreos-usr -A 0 ${DEV} || error
   loop=$(losetup -f --show --partscan ${DEV}) || error
   trap "losetup -d ${loop}" EXIT
   loopp1=${loop}p1
@@ -126,6 +126,11 @@ else
   $CGPT add -S 1 $loopp1 || error
   [ $($CGPT show -S ${loopp1}) -eq 1 ] || error
   [ $($CGPT show -i 1 -S ${DEV}) -eq 1 ] || error
+  [ $($CGPT show -P ${loopp1}) -eq 0 ] || error
+  [ $($CGPT show -i 1 -P ${DEV}) -eq 0 ] || error
+  $CGPT prioritize $loopp1 || error
+  [ $($CGPT show -P ${loopp1}) -eq 1 ] || error
+  [ $($CGPT show -i 1 -P ${DEV}) -eq 1 ] || error
   losetup -d ${loop}
   trap - EXIT
 fi
