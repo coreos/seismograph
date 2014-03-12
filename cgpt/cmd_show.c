@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <string.h>
 
+#include "blkid_utils.h"
 #include "cgpt.h"
 #include "vboot_host.h"
 
@@ -38,6 +39,7 @@ int cmd_show(int argc, char *argv[]) {
 
   int c;
   int errorcnt = 0;
+  int r = CGPT_FAILED;
   char *e = 0;
 
   opterr = 0;                     // quiet, you
@@ -106,7 +108,15 @@ int cmd_show(int argc, char *argv[]) {
     return CGPT_FAILED;
   }
 
-  params.drive_name = argv[optind];
+  params.drive_name = strdup(argv[optind]);
 
-  return CgptShow(&params);
+  r = translate_partition_dev(&params.drive_name, &params.partition);
+  if (r != CGPT_OK)
+    goto out;
+
+  r = CgptShow(&params);
+
+out:
+  free(params.drive_name);
+  return r;
 }

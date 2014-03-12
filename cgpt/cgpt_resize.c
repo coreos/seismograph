@@ -15,6 +15,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "blkid_utils.h"
 #include "cgpt.h"
 #include "cgptlib_internal.h"
 #include "vboot_host.h"
@@ -23,59 +24,6 @@
 #ifndef BLKPG_RESIZE_PARTITION
 # define BLKPG_RESIZE_PARTITION 3
 #endif
-
-
-/* Find the device id for a given blkid_dev.
- * FIXME: libblkid already has this info but lacks a function to expose it.
- */
-static dev_t dev_to_devno(blkid_dev dev) {
-  struct stat dev_stat;
-
-  if (stat(blkid_dev_devname(dev), &dev_stat) < 0)
-    return -1;
-
-  if (!S_ISBLK(dev_stat.st_mode))
-    return -1;
-
-  return dev_stat.st_rdev;
-}
-
-/* Find the whole disk device for a partition. */
-static dev_t dev_to_wholedisk(blkid_dev dev) {
-  dev_t devno, whole;
-
-  if ((devno = dev_to_devno(dev)) < 0)
-    return -1;
-
-  if (blkid_devno_to_wholedisk(devno, NULL, 0, &whole) < 0)
-    return -1;
-
-  return whole;
-}
-
-/* Find the partition number for a given partition. */
-static int dev_to_partno(blkid_dev dev) {
-  char sys_path[512];
-  FILE *sys_fd;
-  int devno, partno;
-
-  if ((devno = dev_to_devno(dev)) < 0)
-    return -1;
-
-  if (snprintf(sys_path, sizeof(sys_path),
-               "/sys/dev/block/%d:%d/partition",
-               major(devno), minor(devno)) <= 0)
-    return -1;
-
-  if ((sys_fd = fopen(sys_path, "r")) == NULL)
-    return -1;
-
-  if (fscanf(sys_fd, "%d", &partno) != 1)
-    partno = -1;
-
-  fclose(sys_fd);
-  return partno;
-}
 
 /* Call the BLKPG ioctl to notify the kernel of the change.
  * start and size are in bytes
@@ -105,25 +53,24 @@ static int blkpg_resize_partition(int fd, int partno,
  *   CGPT_NOOP if nothing to do
  */
 static int resize_partition(CgptResizeParams *params, blkid_dev dev) {
-  dev_t disk_devno;
-  char disk_devname[512];
+  char *disk_devname;
   struct drive drive;
   GptHeader *header;
   GptEntry *entry;
   int gpt_retval, entry_index, entry_count;
   uint64_t free_bytes, last_free_lba, entry_size_lba;
 
-  if ((disk_devno = dev_to_wholedisk(dev)) < 0) {
+  if ((disk_devname = dev_to_wholedevname(dev)) == NULL) {
     Error("Failed to find whole disk device for %s\n", blkid_dev_devname(dev));
     return CGPT_FAILED;
   }
 
-  if (snprintf(disk_devname, sizeof(disk_devname), "/dev/block/%d:%d",
-               major(disk_devno), minor(disk_devno)) <= 0)
+  if (DriveOpen(disk_devname, &drive, 0, O_RDWR) != CGPT_OK) {
+    free(disk_devname);
     return CGPT_FAILED;
+  }
 
-  if (DriveOpen(disk_devname, &drive, 0, O_RDWR) != CGPT_OK)
-    return CGPT_FAILED;
+  free(disk_devname);
 
   if (CGPT_OK != ReadPMBR(&drive)) {
     Error("Unable to read PMBR\n");

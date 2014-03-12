@@ -110,6 +110,27 @@ else
 fi
 
 
+# test passing partition devices to cgpt
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Skipping cgpt tests w/ partition block devices (requires root)"
+else
+  echo "Test cgpt w/ partition block device"
+  rm -f ${DEV}
+  $CGPT create -c -s 1000 ${DEV} || error
+  $CGPT add -i 1 -b 40 -s 900 -t data -A 0 ${DEV} || error
+  loop=$(losetup -f --show --partscan ${DEV}) || error
+  trap "losetup -d ${loop}" EXIT
+  loopp1=${loop}p1
+  # double check that partitioned loop devices work and have correct size
+  [ -b $loopp1 ] || error "$loopp1 is not a block device"
+  $CGPT add -S 1 $loopp1 || error
+  [ $($CGPT show -S ${loopp1}) -eq 1 ] || error
+  [ $($CGPT show -i 1 -S ${DEV}) -eq 1 ] || error
+  losetup -d ${loop}
+  trap - EXIT
+fi
+
+
 echo "Create an empty file to use as the device..."
 NUM_SECTORS=1000
 rm -f ${DEV}

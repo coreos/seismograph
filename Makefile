@@ -367,6 +367,7 @@ TINYHOSTLIB_OBJS = ${TINYHOSTLIB_SRCS:%.c=${BUILD}/%.o}
 CGPT = ${BUILD}/cgpt/cgpt
 
 CGPT_SRCS = \
+	cgpt/blkid_utils.c \
 	cgpt/cgpt.c \
 	cgpt/cgpt_add.c \
 	cgpt/cgpt_boot.c \
