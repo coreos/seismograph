@@ -1064,8 +1064,11 @@ void UpdatePMBR(struct drive *drive, int secondary) {
     if (entry->ending_lba >= max)
       continue;
 
-    fill_part(&drive->pmbr.part[0], 0, 1, entry->starting_lba - 1);
-    fill_part(&drive->pmbr.part[1], 1, entry->starting_lba, entry->ending_lba);
+    // The first partition *must* be the boot partition for compatibility
+    // with Xen's pvgrub which only looks at the first MBR partition.
+    fill_part(&drive->pmbr.part[0], 1, entry->starting_lba, entry->ending_lba);
+    // Create protective partitions to cover the remaining space.
+    fill_part(&drive->pmbr.part[1], 0, 1, entry->starting_lba - 1);
     if (entry->ending_lba < max)
       fill_part(&drive->pmbr.part[2], 0, entry->ending_lba + 1, max);
     return;
