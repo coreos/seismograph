@@ -1033,9 +1033,13 @@ static void fill_part(struct legacy_partition *part, int bootable,
   compute_chs(part->l_chs, ending_lba);
   part->num_sect = htole32((uint32_t)(ending_lba - starting_lba + 1));
 
+  /* If the MBR partition is a bootable hybrid partition set the boot
+   * flag and use type 0x0c (FAT32 LBA). Although the partition is
+   * likely to be our EFI System Partition it cannot use it's proper
+   * type (0xef) because pvgrub and grub-0.97 will not recognize it. */
   if (bootable) {
     part->status = 0x80;
-    part->type = 0xef;
+    part->type = 0x0c;
   } else {
     part->status = 0x00;
     part->type = 0xee;
