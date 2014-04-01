@@ -404,16 +404,28 @@ int rootdev_wrapper(char *path, size_t size,
 
 int rootdev(char *path, size_t size, bool full, bool strip) {
   struct stat root_statbuf;
+  dev_t _root_dev, *root_dev = &_root_dev;
 
   /* Yields the containing dev_t in st_dev. */
   if (stat("/", &root_statbuf) != 0)
     return -1;
 
+  /* Some ABIs (like mips o32) are broken and the st_dev field isn't actually
+   * a dev_t.  In that case, pass a pointer to a local dev_t who we took care
+   * of truncating the value into.  On sane arches, gcc can optimize this to
+   * the same code, so should only be a penalty when the ABI is broken. */
+  if (sizeof(root_statbuf.st_dev) == sizeof(*root_dev)) {
+    /* Cast is OK since we verified size here. */
+    root_dev = (dev_t *)&root_statbuf.st_dev;
+  } else {
+    *root_dev = root_statbuf.st_dev;
+  }
+
   return rootdev_wrapper(path,
                          size,
                          full,
                          strip,
-                         &root_statbuf.st_dev,
+                         root_dev,
                          NULL,  /* default /sys dir */
                          NULL);  /* default /dev dir */
 }
