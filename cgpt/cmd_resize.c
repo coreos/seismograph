@@ -12,14 +12,8 @@
 
 static void Usage(void)
 {
-  printf("\nUsage: %s rezise [TAG=partsearch | /dev/blk1]\n\n"
-         "Search all system disks for a partition to resize. If a specific\n"
-         "device node in /dev is given then use that instead of searching.\n"
-         "To search any unique tag reported by `blkid` can be used.\n"
-         "If more than one partition is found, the partition has not enough\n"
-         "room to grow, or the partition's filesystem is not ext2+ then this\n"
-         "command will return without making any changes to the system.\n\n"
-         "The default search is PARTTYPE=coreos-resize.\n"
+  printf("\nUsage: %s rezise /dev/blk1\n\n"
+	 "Resize the given partition if it has free space to grow into.\n"
          "The default minimum size to grow by is 2MB.\n\n"
          "Options:\n"
          "  -m NUM       Do nothing unless partition can grow by NUM bytes\n"
@@ -73,11 +67,13 @@ int cmd_resize(int argc, char *argv[]) {
     return CGPT_FAILED;
   }
 
-  if (optind < argc) {
-    params.partition_desc = argv[optind];
-  } else {
-    params.partition_desc = "PARTTYPE=coreos-resize";
+  if (optind >= argc)
+  {
+    Error("missing partition argument\n");
+    return CGPT_FAILED;
   }
+
+  params.partition_desc = strdup(argv[optind]);
 
   return CgptResize(&params);
 }

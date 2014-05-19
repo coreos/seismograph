@@ -48,9 +48,8 @@ static int blkpg_resize_partition(int fd, int partno,
 
 /* Resize the partition and notify the kernel.
  * returns:
- *   CGPT_OK for resize successful
+ *   CGPT_OK for resize successful or nothing to do
  *   CGPT_FAILED on error
- *   CGPT_NOOP if nothing to do
  */
 static int resize_partition(CgptResizeParams *params, blkid_dev dev) {
   char *disk_devname;
@@ -116,7 +115,7 @@ static int resize_partition(CgptResizeParams *params, blkid_dev dev) {
     if (DriveClose(&drive, 0) != CGPT_OK)
       return CGPT_FAILED;
     else
-      return CGPT_NOOP;
+      return CGPT_OK;
   }
 
   // Update and test partition table in memory
@@ -154,93 +153,12 @@ nope:
   return CGPT_FAILED;
 }
 
-/* a wrapper for the usual fork/exec boiler plate
- * returns process exit code or -1 on error */
-static int xspawnlp(char *cmd, ...) {
-  pid_t child_pid;
-  int child_status, argno;
-  char *args[10];
-  va_list ap;
-
-  va_start(ap, cmd);
-  argno = 0;
-  args[0] = cmd;
-  while (args[argno] != NULL && argno < 9)
-    args[++argno] = va_arg(ap, char *);
-  args[argno] = NULL;
-  va_end(ap);
-
-  child_pid = fork();
-  if (child_pid < 0) {
-    Error("fork failed: %s\n", cmd, strerror(errno));
-    return -1;
-  }
-  else if (child_pid == 0) {
-    execvp(cmd, args);
-    Error("exec %s failed: %s\n", cmd, strerror(errno));
-    _exit(127);
-  }
-  else {
-    if (waitpid(child_pid, &child_status, 0) < 0) {
-      Error("waitpid for %s failed: %s\n", cmd, strerror(errno));
-      return -1;
-    }
-    else if (WIFEXITED(child_status)) {
-      return WEXITSTATUS(child_status);
-    }
-    else if (WIFSIGNALED(child_status)) {
-      Error("process %s terminated by signal %s (%d)\n", cmd,
-            strsignal(WTERMSIG(child_status)), WTERMSIG(child_status));
-      return -1;
-    }
-  }
-
-  return -1;
-}
-
-/* fsck and resize an ext[234] filesystem. */
-static int resize_filesystem(CgptResizeParams *params, blkid_dev dev) {
-  const char *devname = blkid_dev_devname(dev);
-  int exit_code, err = CGPT_OK;
-
-  // resize2fs won't run unless filesystem has been checked.
-  exit_code = xspawnlp("e2fsck", "-f", "-p", devname, NULL);
-  if (exit_code < 0)
-    return CGPT_FAILED;
-  else if (exit_code != 0 && exit_code != 1) {
-    // only fs unchanged or fs repaired codes are acceptable.
-    Error("e2fsck exited with code %d\n", exit_code);
-    return CGPT_FAILED;
-  }
-
-  exit_code = xspawnlp("resize2fs", devname, NULL);
-  if (exit_code < 0)
-    err = CGPT_FAILED;
-  else if (exit_code != 0) {
-    Error("resize2fs exited with code %d\n", exit_code);
-    err = CGPT_FAILED;
-  }
-
-  // make double sure resize2fs didn't make a mess of anything
-  exit_code = xspawnlp("e2fsck", "-f", "-p", devname, NULL);
-  if (exit_code < 0)
-    return CGPT_FAILED;
-  else if (exit_code != 0 && exit_code != 1) {
-    // only fs unchanged or fs repaired codes are acceptable.
-    Error("e2fsck exited with code %d\n", exit_code);
-    return CGPT_FAILED;
-  }
-
-  return err;
-}
-
 /* Search for a partition to resize and expand it if possible.
  * Both the partition table and the filesytem will be updated.
  */
 int CgptResize(CgptResizeParams *params) {
   blkid_cache cache = NULL;
   blkid_dev found_dev = NULL;
-  char *tag_name = NULL, *tag_value = NULL;
   int err = CGPT_FAILED;
 
   if (params == NULL || params->partition_desc == NULL)
@@ -249,68 +167,16 @@ int CgptResize(CgptResizeParams *params) {
   if (blkid_get_cache(&cache, NULL) < 0)
     goto exit;
 
-  if (!strncmp(params->partition_desc, "/dev/", 5)) {
-    found_dev = blkid_get_dev(cache, params->partition_desc, BLKID_DEV_NORMAL);
-  }
-  else {
-    // No exact device specified, search all system partitions.
-    Guid tag_guid;
-    blkid_dev_iterate dev_iter;
-    blkid_dev dev;
-
-    if (blkid_parse_tag_string(params->partition_desc, &tag_name, &tag_value)) {
-      Error("partition must be specified by a NAME=value pair\n");
-      goto exit;
-    }
-
-    // Translate known partition types into plain GUID strings.
-    if (strcmp(tag_name, "PARTTYPE") == 0 &&
-        SupportedType(tag_value, &tag_guid) == CGPT_OK) {
-      free(tag_value);
-      tag_value = malloc(GUID_STRLEN);
-      require(tag_value);
-      GuidToStrLower(&tag_guid, tag_value, GUID_STRLEN);
-    }
-
-    blkid_probe_all(cache);
-    dev_iter = blkid_dev_iterate_begin(cache);
-    blkid_dev_set_search(dev_iter, tag_name, tag_value);
-
-    // Check all devices, one and only one is allowed to match.
-    while (blkid_dev_next(dev_iter, &dev) == 0) {
-      dev = blkid_verify(cache, dev);
-      if (!dev)
-        continue;
-
-      if (found_dev) {
-        Error("more than one partition matched %s\n", params->partition_desc);
-        goto exit;
-      }
-
-      found_dev = dev;
-    }
-  }
+  found_dev = blkid_get_dev(cache, params->partition_desc, BLKID_DEV_NORMAL);
 
   if (!found_dev) {
-    Error("no partition found matching %s\n", params->partition_desc);
+    Error("device not found %s\n", params->partition_desc);
     goto exit;
   }
 
-  if ((err = resize_partition(params, found_dev)) != CGPT_OK)
-    goto exit;
-
-  // Only ext[123] filesystem resizing is supported.
-  if (blkid_dev_has_tag(found_dev, "TYPE", "ext2") ||
-      blkid_dev_has_tag(found_dev, "TYPE", "ext3") ||
-      blkid_dev_has_tag(found_dev, "TYPE", "ext4")) {
-    err = resize_filesystem(params, found_dev);
-  }
+  err = resize_partition(params, found_dev);
 
 exit:
-  if (err == CGPT_NOOP)
-    err = CGPT_OK;
-  free(tag_name);
-  free(tag_value);
   blkid_put_cache(cache);
   return err;
 }
