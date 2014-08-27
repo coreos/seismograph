@@ -803,11 +803,6 @@ ${BUILD}/%.o: %.cc
 # GBB utility needs C++ linker. TODO: It shouldn't.
 ${BUILD}/utility/gbb_utility: LD = ${CXX}
 
-# Because we play some clever linker script games to add new commands without
-# changing any header files, futility must be linked with ld.bfd, not gold.
-${FUTIL_BIN}: LDFLAGS += -fuse-ld=bfd
-${FUTIL_STATIC_BIN}: LDFLAGS += -fuse-ld=bfd
-
 # Some utilities need external crypto functions
 ${BUILD}/utility/dumpRSAPublicKey: LDLIBS += ${CRYPTO_LIBS}
 ${BUILD}/utility/pad_digest_utility: LDLIBS += ${CRYPTO_LIBS}
