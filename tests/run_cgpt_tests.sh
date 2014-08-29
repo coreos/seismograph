@@ -298,6 +298,10 @@ declare -A GPT_TYPES
 # http://www.uefi.org/sites/default/files/resources/2_4_Errata_A.pdf
 GPT_TYPES[efi]="C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 
+# BIOS Boot Partition for GRUB
+# https://www.gnu.org/software/grub/manual/html_node/BIOS-installation.html
+GPT_TYPES[bios]="21686148-6449-6E6F-744E-656564454649"
+
 # MS Windows basic data
 GPT_TYPES[mswin-data]="EBD0A0A2-B9E5-4433-87C0-68B6B72699C7"
 

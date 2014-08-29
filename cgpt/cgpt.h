@@ -72,6 +72,7 @@ extern const Guid guid_linux_lvm;
 extern const Guid guid_linux_raid;
 extern const Guid guid_linux_reserved;
 extern const Guid guid_efi;
+extern const Guid guid_bios;
 extern const Guid guid_unused;
 extern const Guid guid_coreos_reserved;
 extern const Guid guid_coreos_resize;
