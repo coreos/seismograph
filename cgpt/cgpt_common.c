@@ -605,6 +605,7 @@ const Guid guid_linux_lvm =         GPT_ENT_TYPE_LINUX_LVM;
 const Guid guid_linux_raid =        GPT_ENT_TYPE_LINUX_RAID;
 const Guid guid_linux_reserved =    GPT_ENT_TYPE_LINUX_RESERVED;
 const Guid guid_efi =               GPT_ENT_TYPE_EFI;
+const Guid guid_bios =              GPT_ENT_TYPE_BIOS;
 const Guid guid_unused =            GPT_ENT_TYPE_UNUSED;
 const Guid guid_coreos_reserved =   GPT_ENT_TYPE_COREOS_RESERVED;
 const Guid guid_coreos_resize =     GPT_ENT_TYPE_COREOS_RESIZE;
@@ -629,6 +630,7 @@ static struct {
 
   // GPT/UEFI standard types
   {&guid_efi, "efi", "EFI System Partition"},
+  {&guid_bios, "bios", "BIOS Boot Partition"},
   {&guid_unused, "unused", "Unused (nonexistent) partition"},
 
   // General Linux
