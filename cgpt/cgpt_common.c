@@ -1121,7 +1121,7 @@ char *IsWholeDev(const char *basename) {
 
   // It should be a block device under /dev/,
   for (i = 0; devdirs[i]; i++) {
-    sprintf(pathname, "%s/%s", devdirs[i], basename);
+    snprintf(pathname, BUFSIZE, "%s/%s", devdirs[i], basename);
 
     if (0 != stat(pathname, &statbuf))
       continue;
@@ -1130,7 +1130,7 @@ char *IsWholeDev(const char *basename) {
       continue;
 
     // It should have a symlink called /sys/block/*/device
-    sprintf(tmpname, "%s/%s/device", SYS_BLOCK_DIR, basename);
+    snprintf(tmpname, BUFSIZE, "%s/%s/device", SYS_BLOCK_DIR, basename);
 
     if (0 != lstat(tmpname, &statbuf))
       continue;
