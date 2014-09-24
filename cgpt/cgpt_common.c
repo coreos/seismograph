@@ -1114,14 +1114,15 @@ static const char *devdirs[] = { "/dev", "/devices", "/devfs", 0 };
 // This is copied from the logic in the linux utility 'findfs', although that
 // does more exhaustive searching.
 char *IsWholeDev(const char *basename) {
-  int i;
+  int i,j,len;
   struct stat statbuf;
   static char pathname[BUFSIZE];        // we'll return this.
   char tmpname[BUFSIZE];
+  char tbasename[BUFSIZE];
 
   // It should be a block device under /dev/,
   for (i = 0; devdirs[i]; i++) {
-    sprintf(pathname, "%s/%s", devdirs[i], basename);
+    snprintf(pathname, BUFSIZE, "%s/%s", devdirs[i], basename);
 
     if (0 != stat(pathname, &statbuf))
       continue;
@@ -1130,7 +1131,14 @@ char *IsWholeDev(const char *basename) {
       continue;
 
     // It should have a symlink called /sys/block/*/device
-    sprintf(tmpname, "%s/%s/device", SYS_BLOCK_DIR, basename);
+    // but devices containing '/' (like cciss ones) must
+    // be changed to use "!" instead
+    len = strlen(basename);
+    for (j = 0; j < len && j < BUFSIZE - 1; j++) {
+        tbasename[j] = basename[j] == '/' ? '!' : basename[j];
+    }
+    tbasename[j] = 0;
+    snprintf(tmpname, BUFSIZE, "%s/%s/device", SYS_BLOCK_DIR, tbasename);
 
     if (0 != lstat(tmpname, &statbuf))
       continue;
