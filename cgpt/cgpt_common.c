@@ -1027,19 +1027,39 @@ static void compute_chs(uint8_t chs[3], uint64_t lba) {
   chs[2] = (uint8_t)cyl;
 }
 
-static void fill_part(struct legacy_partition *part, int bootable,
+enum mbr_type {
+  MBR_PROTECTIVE,
+  MBR_HYBRID,
+  MBR_BOOTABLE,
+};
+
+static void fill_part(struct legacy_partition *part, enum mbr_type type,
                       uint64_t starting_lba, uint64_t ending_lba) {
-  compute_chs(part->f_chs, starting_lba);
+  /* For simple protective MBRs do not compute CHS, use the same bogus
+   * values that parted does. May help avoid boot issues on some systems. */
+  if (type == MBR_PROTECTIVE) {
+    part->f_chs[0] = 0x00;
+    part->f_chs[1] = 0x01;
+    part->f_chs[2] = 0x00;
+  } else {
+    compute_chs(part->f_chs, starting_lba);
+  }
   part->f_lba = htole32((uint32_t)starting_lba);
 
-  compute_chs(part->l_chs, ending_lba);
+  if (type == MBR_PROTECTIVE) {
+    part->l_chs[0] = 0xfe;
+    part->l_chs[1] = 0xff;
+    part->l_chs[2] = 0xff;
+  } else {
+    compute_chs(part->l_chs, ending_lba);
+  }
   part->num_sect = htole32((uint32_t)(ending_lba - starting_lba + 1));
 
   /* If the MBR partition is a bootable hybrid partition set the boot
    * flag and use type 0x0c (FAT32 LBA). Although the partition is
    * likely to be our EFI System Partition it cannot use it's proper
    * type (0xef) because pvgrub and grub-0.97 will not recognize it. */
-  if (bootable) {
+  if (type == MBR_BOOTABLE) {
     part->status = 0x80;
     part->type = 0x0c;
   } else {
@@ -1072,16 +1092,19 @@ void UpdatePMBR(struct drive *drive, int secondary) {
 
     // The first partition *must* be the boot partition for compatibility
     // with Xen's pvgrub which only looks at the first MBR partition.
-    fill_part(&drive->pmbr.part[0], 1, entry->starting_lba, entry->ending_lba);
-    // Create protective partitions to cover the remaining space.
-    fill_part(&drive->pmbr.part[1], 0, 1, entry->starting_lba - 1);
+    // The space between the MBR and first partition (which includes the
+    // primary GPT) is not covered by a protective partition because there
+    // may be issues when there are two partitions of type 0xee (EFI).
+    fill_part(&drive->pmbr.part[0], MBR_BOOTABLE,
+              entry->starting_lba, entry->ending_lba);
+    // Create protective partition to cover the remaining space.
     if (entry->ending_lba < max)
-      fill_part(&drive->pmbr.part[2], 0, entry->ending_lba + 1, max);
+      fill_part(&drive->pmbr.part[1], MBR_HYBRID, entry->ending_lba + 1, max);
     return;
   }
 
   // No partition found for hybrid MBR, create standard protective MBR
-  fill_part(&drive->pmbr.part[0], 0, 1, max);
+  fill_part(&drive->pmbr.part[0], MBR_PROTECTIVE, 1, max);
 }
 
 void PMBRToStr(struct pmbr *pmbr, char *str, unsigned int buflen) {
