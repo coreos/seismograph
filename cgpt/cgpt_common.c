@@ -1097,9 +1097,8 @@ void UpdatePMBR(struct drive *drive, int secondary) {
     // may be issues when there are two partitions of type 0xee (EFI).
     fill_part(&drive->pmbr.part[0], MBR_BOOTABLE,
               entry->starting_lba, entry->ending_lba);
-    // Create protective partition to cover the remaining space.
-    if (entry->ending_lba < max)
-      fill_part(&drive->pmbr.part[1], MBR_HYBRID, entry->ending_lba + 1, max);
+    // Create protective partition to cover the GPT table.
+    fill_part(&drive->pmbr.part[1], MBR_HYBRID, 1, entry->starting_lba - 1);
     return;
   }
 
