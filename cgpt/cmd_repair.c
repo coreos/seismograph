@@ -5,6 +5,7 @@
 #include <getopt.h>
 #include <string.h>
 
+#include "blkid_utils.h"
 #include "cgpt.h"
 #include "vboot_host.h"
 
@@ -22,7 +23,9 @@ int cmd_repair(int argc, char *argv[]) {
   memset(&params, 0, sizeof(params));
 
   int c;
+  int r;
   int errorcnt = 0;
+  uint32_t partition = 0;
 
   opterr = 0;                     // quiet, you
   while ((c=getopt(argc, argv, ":hv")) != -1)
@@ -55,7 +58,15 @@ int cmd_repair(int argc, char *argv[]) {
     return CGPT_FAILED;
   }
 
-  params.drive_name = argv[optind];
+  params.drive_name = strdup(argv[optind]);
 
-  return CgptRepair(&params);
+  r = translate_partition_dev(&params.drive_name, &partition);
+  if (r != CGPT_OK)
+    goto out;
+
+  r = CgptRepair(&params);
+
+out:
+  free(params.drive_name);
+  return r;
 }
