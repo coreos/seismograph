@@ -131,6 +131,7 @@ int main(int argc, char **argv) {
     root_dev = path_stat.st_dev;
   }
 
+  path[0] = '\0';
   ret = rootdev_wrapper(path, sizeof(path),
                         flag_use_slave,
                         flag_strip_partition,
