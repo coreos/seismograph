@@ -1,5 +1,5 @@
-#!/bin/sh
-# Copyright (C) 2010 The Chromium OS Authors. All rights reserved.
+#!/bin/bash
+# Copyright 2010 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 #
@@ -70,16 +70,17 @@ expect () {
   return 0
 }
 
-if [ ! -e ./rootdev ]; then
-  error "rootdev must be in the cwd"
+ROOTDEV=${1:-./rootdev}
+if [[ ! -e ${ROOTDEV} ]]; then
+  error "could not find rootdev '${ROOTDEV}'"
 fi
 
-if [ "$USER" != "root" ]; then
-  error "Must be run as root to use mknod ($USER)"
+if [ "${USER:-}" != "root" ]; then
+  error "Must be run as root to use mknod (${USER:-})"
 fi
 
 t00_bad_sys_dir () {
-  out=$(./rootdev --block $WORKDIR 2>/dev/null)
+  out=$("${ROOTDEV}" --block $WORKDIR 2>/dev/null)
   expect "$? -ne 0" || return 1
   expect "-z '$out'" || return 1
 }
@@ -105,7 +106,7 @@ t01_sys_dev_match () {
   local dev=$WORKDIR/dev
   h00_setup_sda_tree $block $dev
 
-  out=$(./rootdev --dev $dev --block $block --major 10 --minor 1 2>/dev/null)
+  out=$("${ROOTDEV}" --dev $dev --block $block --major 10 --minor 1 2>/dev/null)
   expect "$? -eq 0" || return 1
   expect "'$dev/sda1' = '$out'" || return 1
 }
@@ -116,7 +117,7 @@ t02_sys_dev_match_block () {
   local dev=$WORKDIR/dev
   h00_setup_sda_tree $block $dev
 
-  out=$(./rootdev --dev $dev --block $block --major 10 --minor 0 2>/dev/null)
+  out=$("${ROOTDEV}" --dev $dev --block $block --major 10 --minor 0 2>/dev/null)
   expect "$? -eq 0" || return 1
   expect "'$dev/sda' = '$out'" || return 1
 }
@@ -128,7 +129,7 @@ t03_sys_dev_match_block_no_dev () {
   h00_setup_sda_tree $block $dev
   rm $dev/sda
 
-  out=$(./rootdev --dev $dev --block $block --major 10 --minor 0 2>/dev/null)
+  out=$("${ROOTDEV}" --dev $dev --block $block --major 10 --minor 0 2>/dev/null)
   expect "$? -eq 1" || return 1
   expect "'$dev/sda' = '$out'" || return 1
 }
@@ -140,7 +141,7 @@ t04_sys_dev_match_block_no_dev_ignore () {
   h00_setup_sda_tree $block $dev
   rm $dev/sda
 
-  out=$(./rootdev -i --dev $dev --block $block --major 10 --minor 0 2>/dev/null)
+  out=$("${ROOTDEV}" -i --dev $dev --block $block --major 10 --minor 0 2>/dev/null)
   expect "$? -eq 0" || return 1
   expect "'$dev/sda' = '$out'" || return 1
 }
@@ -165,7 +166,7 @@ t05_match_dm () {
   h00_setup_sda_tree $block $dev
   h01_setup_dm_tree $block $dev
 
-  out=$(./rootdev --dev $dev --block $block --major 254 --minor 0 \
+  out=$("${ROOTDEV}" --dev $dev --block $block --major 254 --minor 0 \
         2>/dev/null)
   expect "$? -eq 0" || return 1
   expect "'$dev/dm-0' = '$out'" || return 1
@@ -178,7 +179,7 @@ t06_match_dm_slave () {
   h00_setup_sda_tree $block $dev
   h01_setup_dm_tree $block $dev
 
-  out=$(./rootdev -s --dev $dev --block $block --major 254 --minor 0 \
+  out=$("${ROOTDEV}" -s --dev $dev --block $block --major 254 --minor 0 \
         2>/dev/null)
   expect "$? -eq 0" || return 1
   expect "'$dev/sda1' = '$out'" || return 1
@@ -191,7 +192,7 @@ t07_safe_fail_on_no_slave () {
   h00_setup_sda_tree $block $dev
   h01_setup_dm_tree $block $dev
 
-  out=$(./rootdev -s --dev $dev --block $block --major 10 --minor 1 \
+  out=$("${ROOTDEV}" -s --dev $dev --block $block --major 10 --minor 1 \
         2>/dev/null)
   expect "$? -eq 0" || return 1
   expect "'$dev/sda1' = '$out'" || return 1
@@ -207,7 +208,7 @@ t08_safe_fail_on_no_slave_dev () {
   # but the path will still represent the slave.
   rm $dev/sda1
 
-  out=$(./rootdev -s --dev $dev --block $block --major 254 --minor 0 \
+  out=$("${ROOTDEV}" -s --dev $dev --block $block --major 254 --minor 0 \
         2>/dev/null)
   expect "$? -eq 1" || return 1
   expect "'$dev/sda1' = '$out'" || return 1
@@ -223,7 +224,7 @@ t09_safe_fail_on_no_slave_dev_ignore () {
   # but the path will still represent the slave.
   rm $dev/sda1
 
-  out=$(./rootdev -i -s --dev $dev --block $block --major 254 --minor 0 \
+  out=$("${ROOTDEV}" -i -s --dev $dev --block $block --major 254 --minor 0 \
         2>/dev/null)
   expect "$? -eq 0" || return 1
   expect "'$dev/sda1' = '$out'" || return 1
@@ -249,7 +250,7 @@ t10_mmcdev () {
   local block=$WORKDIR/sys/block
   local dev=$WORKDIR/dev
   h02_setup_mmc_tree $block $dev
-  out=$(./rootdev --dev $dev --block $block --major 11 --minor 2 \
+  out=$("${ROOTDEV}" --dev $dev --block $block --major 11 --minor 2 \
         2>/dev/null)
   expect "$? -eq 0" || return 1
   expect "'$dev/mmcblk0p2' = '$out'" || return 1
@@ -260,7 +261,7 @@ t11_mmcdev_strip () {
   local block=$WORKDIR/sys/block
   local dev=$WORKDIR/dev
   h02_setup_mmc_tree $block $dev
-  out=$(./rootdev -d --dev $dev --block $block --major 11 --minor 2 \
+  out=$("${ROOTDEV}" -d --dev $dev --block $block --major 11 --minor 2 \
         2>/dev/null)
   expect "$? -eq 0" || return 1
   expect "'$dev/mmcblk0' = '$out'" || return 1
@@ -271,7 +272,7 @@ t12_sda_strip () {
   local block=$WORKDIR/sys/block
   local dev=$WORKDIR/dev
   h00_setup_sda_tree $block $dev
-  out=$(./rootdev -d --dev $dev --block $block --major 10 --minor 2 \
+  out=$("${ROOTDEV}" -d --dev $dev --block $block --major 10 --minor 2 \
         2>/dev/null)
   expect "$? -eq 0" || return 1
   expect "'$dev/sda' = '$out'" || return 1
