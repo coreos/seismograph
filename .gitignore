@@ -1,6 +1,11 @@
+/Makefile.in
+/aclocal.m4
+/autom4te.cache/
+/build-aux/
 /build
 /build-au
 /build-main
+/configure
 ID
 scripts/newbitmaps/default_source/*.bmp
 scripts/newbitmaps/images/out_*
