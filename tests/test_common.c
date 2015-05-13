@@ -11,8 +11,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "cryptolib.h"
-#include "file_keys.h"
 #include "utility.h"
 
 /* Global test success flag. */

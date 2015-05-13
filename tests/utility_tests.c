@@ -14,7 +14,6 @@
 
 #include "test_common.h"
 #include "utility.h"
-#include "vboot_common.h"
 
 
 /* Test utility.h and sysincludes.h macros */
