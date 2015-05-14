@@ -9,7 +9,7 @@
 # Load common constants and variables.
 . "$(dirname "$0")/common.sh"
 
-CGPT=$(readlink -f "$1")
+CGPT=$(readlink -f "${1:-./cgpt}")
 [ -x "$CGPT" ] || error "Can't execute $CGPT"
 
 # Run tests in a dedicated directory for easy cleanup or debugging.
