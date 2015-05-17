@@ -2,10 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.68])
-AC_INIT([vboot_reference], [0],
-        [https://github.com/coreos/vboot_reference/issues])
+AC_INIT([seismograph], [0], [https://github.com/coreos/seismograph/issues])
 AC_CONFIG_AUX_DIR([build-aux])
-AC_CONFIG_SRCDIR([cgpt/cgpt.c])
+AC_CONFIG_SRCDIR([src/cgpt/cgpt.c])
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
 
