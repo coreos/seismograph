@@ -74,6 +74,27 @@ $CGPT repair ${DEV} || error
 verify
 
 
+echo "Test that cgpt preserves MBR boot code"
+dd if=/dev/urandom of=${DEV}.mbr bs=446 count=1 status=noxfer || error
+rm -f ${DEV}
+$CGPT create -c -s 100 ${DEV} || error
+dd if=${DEV}.mbr of=${DEV} conv=notrunc status=noxfer || error
+$CGPT add -t rootfs -b 50 -s 1 ${DEV} || error
+cmp --bytes=446 ${DEV}.mbr ${DEV} || error
+# kill the MBR table and the primary GPT, leave the boot code
+dd if=/dev/zero of=${DEV} bs=446 seek=1 count=2 conv=notrunc status=noxfer || error
+$CGPT repair ${DEV} || error
+verify
+cmp --bytes=446 ${DEV}.mbr ${DEV} || error
+# try switching between hybrid and protective MBRs
+$CGPT add -i1 -B1 ${DEV} || error
+verify
+cmp --bytes=446 ${DEV}.mbr ${DEV} || error
+$CGPT add -i1 -B0 ${DEV} || error
+verify
+cmp --bytes=446 ${DEV}.mbr ${DEV} || error
+
+
 # resize requires a partitioned block device
 if [ "$(id -u)" -ne 0 ]; then
   echo "Skipping cgpt resize tests w/ block devices (requires root)"
