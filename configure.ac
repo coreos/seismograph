@@ -8,7 +8,7 @@ AC_CONFIG_SRCDIR([src/cgpt/cgpt.c])
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
 
-AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules])
+AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules subdir-objects])
 AM_SILENT_RULES([yes])
 
 # Checks for programs.
