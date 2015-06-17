@@ -12,7 +12,7 @@ AM_CFLAGS = -Wall -Werror \
 	    -fvisibility=hidden \
 	    -std=gnu99
 
-bin_PROGRAMS = cgpt
+bin_PROGRAMS = cgpt e2size
 
 cgpt_SOURCES = \
 	src/cgpt/blkid_utils.c \
@@ -45,6 +45,9 @@ cgpt_SOURCES = \
 	src/firmware/lib/utility_string.c \
 	src/firmware/stub/utility_stub.c
 cgpt_LDADD = $(BLKID_LIBS) $(UUID_LIBS)
+
+e2size_SOURCES = src/e2size/e2size.c
+e2size_LDADD = $(EXT2FS_LIBS)
 
 check_PROGRAMS = cgptlib_test \
 		 utility_string_tests \
