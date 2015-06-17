@@ -17,6 +17,7 @@ AC_PROG_CC
 # Checks for libraries.
 PKG_CHECK_MODULES([BLKID], [blkid])
 PKG_CHECK_MODULES([UUID], [uuid])
+PKG_CHECK_MODULES([EXT2FS], [ext2fs])
 
 # Checks for header files.
 
