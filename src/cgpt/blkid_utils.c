@@ -92,7 +92,7 @@ int translate_partition_dev(char **devname, uint32_t *partition) {
   }
 
   if (stat(*devname, &dev_stat) < 0) {
-    Error("unable to access drvice %s: %s\n", *devname, strerror(errno));
+    Error("unable to access device %s: %s\n", *devname, strerror(errno));
     return CGPT_FAILED;
   }
 
