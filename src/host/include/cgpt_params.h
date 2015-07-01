@@ -16,6 +16,7 @@ enum {
 
 typedef struct CgptCreateParams {
   char *drive_name;
+  char *drive_guid;
   int zap;
   int create;
   uint64_t min_size;

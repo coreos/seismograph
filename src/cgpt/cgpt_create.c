@@ -9,7 +9,7 @@
 #include "cgptlib_internal.h"
 #include "vboot_host.h"
 
-static int initialize_gpt(struct drive *drive) {
+static int initialize_gpt(struct drive *drive, const char *guid) {
   GptHeader *h = (GptHeader *)drive->gpt.primary_header;
   memcpy(h->signature, GPT_HEADER_SIGNATURE, GPT_HEADER_SIGNATURE_SIZE);
   h->revision = GPT_HEADER_REVISION;
@@ -18,11 +18,18 @@ static int initialize_gpt(struct drive *drive) {
   h->alternate_lba = drive->gpt.drive_sectors - 1;
   h->first_usable_lba = 1 + 1 + GPT_ENTRIES_SECTORS;
   h->last_usable_lba = drive->gpt.drive_sectors - 1 - GPT_ENTRIES_SECTORS - 1;
-  if (!uuid_generator) {
-    Error("Unable to generate new GUID. uuid_generator not set.\n");
-    return CGPT_FAILED;
+  if (guid) {
+    if (StrToGuid(guid, &h->disk_uuid) != CGPT_OK) {
+      Error("Provided GUID is invalid: \"%s\"\n", guid);
+      return CGPT_FAILED;
+    }
+  } else {
+    if (!uuid_generator) {
+      Error("Unable to generate new GUID. uuid_generator not set.\n");
+      return CGPT_FAILED;
+    }
+    (*uuid_generator)((uint8_t *)&h->disk_uuid);
   }
-  (*uuid_generator)((uint8_t *)&h->disk_uuid);
   h->entries_lba = 2;
   h->number_of_entries = 128;
   h->size_of_entry = sizeof(GptEntry);
@@ -65,7 +72,7 @@ int CgptCreate(CgptCreateParams *params) {
   // Initialize a blank set
   if (!params->zap)
   {
-    if (CGPT_OK != initialize_gpt(&drive))
+    if (CGPT_OK != initialize_gpt(&drive, params->drive_guid))
       goto bad;
 
     InitPMBR(&drive, PRIMARY);

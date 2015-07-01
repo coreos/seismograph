@@ -157,6 +157,17 @@ else
 fi
 
 
+if [[ -n "$SGDISK" ]]; then
+    echo "Test cgpt disk GUID"
+    GUID='01234567-89AB-CDEF-0123-456789ABCDEF'
+    $CGPT create -s 1000 -g ${GUID} ${DEV} || error
+    [[ $($SGDISK --print ${DEV} | \
+         gawk -F': ' '/Disk identifier/ { print $2 }') == ${GUID} ]] || error
+else
+    echo "Skipping cpgt disk GUID test because sgdisk wasn't found"
+fi
+
+
 echo "Create an empty file to use as the device..."
 NUM_SECTORS=1000
 rm -f ${DEV}
