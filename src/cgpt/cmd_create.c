@@ -16,6 +16,7 @@ static void Usage(void)
          "  -c           Create disk image file if needed. Requires -s\n"
          "  -s NUM       Minimum disk sectors, extends image files\n"
          "  -z           Zero the sectors of the GPT table and entries\n"
+         "  -g GUID      The desired disk GUID\n"
          "\n", progname);
 }
 
@@ -28,7 +29,7 @@ int cmd_create(int argc, char *argv[]) {
   char *e = 0;
 
   opterr = 0;                     // quiet, you
-  while ((c=getopt(argc, argv, ":hcs:z")) != -1)
+  while ((c=getopt(argc, argv, ":hcs:zg:")) != -1)
   {
     switch (c)
     {
@@ -44,6 +45,9 @@ int cmd_create(int argc, char *argv[]) {
         Error("invalid argument to -%c: \"%s\"\n", c, optarg);
         errorcnt++;
       }
+      break;
+    case 'g':
+      params.drive_guid = optarg;
       break;
 
     case 'h':
