@@ -12,7 +12,7 @@ AM_CFLAGS = -Wall -Werror \
 	    -fvisibility=hidden \
 	    -std=gnu99
 
-bin_PROGRAMS = cgpt e2size
+bin_PROGRAMS = cgpt loopy e2size
 
 cgpt_SOURCES = \
 	src/cgpt/blkid_utils.c \
@@ -48,6 +48,10 @@ cgpt_LDADD = $(BLKID_LIBS) $(UUID_LIBS)
 
 e2size_SOURCES = src/e2size/e2size.c
 e2size_LDADD = $(EXT2FS_LIBS)
+
+loopy_SOURCES = \
+	src/loopy/loopy.c
+loopy_LDADD = $(MNT_LIBS)
 
 check_PROGRAMS = cgptlib_test \
 		 utility_string_tests \

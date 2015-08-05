@@ -18,6 +18,7 @@ AC_PROG_CC
 PKG_CHECK_MODULES([BLKID], [blkid])
 PKG_CHECK_MODULES([UUID], [uuid])
 PKG_CHECK_MODULES([EXT2FS], [ext2fs])
+PKG_CHECK_MODULES([MNT], [mount])
 
 # Checks for header files.
 

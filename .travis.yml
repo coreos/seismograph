@@ -1,7 +1,7 @@
 language: c
 install:
  - sudo apt-get update -qq
- - sudo apt-get install -qq uuid-dev gdisk libblkid-dev e2fslibs-dev
+ - sudo apt-get install -qq uuid-dev gdisk libblkid-dev e2fslibs-dev libmount-dev
 script: |
     ./autogen.sh
     mkdir build
