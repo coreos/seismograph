@@ -11,9 +11,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static int get_node(const char *image_path, char **loopdev) {
+static int get_node(const char *image_path, char **loopdev, int *loop) {
+	
 
-        int fd = -1, nr = -1, loop = -1, control = -1, success = -1;
+        struct loop_info64 info = {
+                .lo_flags = LO_FLAGS_AUTOCLEAR
+        };
+
+	int nr = -1, fd = -1, control = -1, success = -1;
 
         fd = open(image_path, O_CLOEXEC|O_RDWR);
         if (fd < 0) {
@@ -40,16 +45,21 @@ static int get_node(const char *image_path, char **loopdev) {
 
         printf("initializing loop device node at /dev/loop%d \n", nr);
 
-        loop = open(*loopdev, O_CLOEXEC|O_RDWR);
-        if (loop < 0) {
+        *loop = open(*loopdev, O_CLOEXEC|O_RDWR);
+        if (*loop < 0) {
                 perror("Failed to open loop device loopdev");
                 goto out;
         }
 
-        if (ioctl(loop, LOOP_SET_FD, fd) < 0) {
+        if (ioctl(*loop, LOOP_SET_FD, fd) < 0) {
                 perror("Failed to set loopback file descriptor fd on loopdev");
                 goto out;
         }
+
+	if (ioctl(*loop, LOOP_SET_STATUS64, &info) < 0) {
+		perror("Failed to set loop device status on new node");
+		goto out;
+	}
 
         success = 1;
 
@@ -57,12 +67,6 @@ static int get_node(const char *image_path, char **loopdev) {
 
                 if (fd >= 0)
                         close(fd);
-
-                if (loop >= 0)
-                        close(loop);
-
-                if (success != 1)
-                        free(*loopdev);
 
                 if (success != 1 && nr >= 0 && control >= 0)
                         ioctl(control, LOOP_CTL_REMOVE, nr);
@@ -78,11 +82,12 @@ static int single_mount(const char *image_path, const char *target) {
 
 
         int rc = -1;
+	int loop = -1;
         struct libmnt_context *cxt;
         cxt = mnt_new_context();
         char *source = NULL;
 
-        if ( get_node(image_path, &source) < 0 ) {
+        if ( get_node(image_path, &source, &loop) < 0 ) {
                 printf("Failed to get node for mounting");
                 goto out;
         }
@@ -116,7 +121,10 @@ static int single_mount(const char *image_path, const char *target) {
 		
 		mnt_free_context(cxt);
         
-        	free(source);
+	       	free(source);
+
+		if (loop >= 0)
+			close(loop);
 
         return rc;
 }
