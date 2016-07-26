@@ -105,7 +105,7 @@ int CgptNext(CgptNextParams *params) {
     scan_real_devs(params);
   }
 
-  if (strlen(next_file_name) < 0) {
+  if (strlen(next_file_name) == 0) {
     return CGPT_FAILED;
   }
 
