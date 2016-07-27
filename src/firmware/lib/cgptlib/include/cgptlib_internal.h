@@ -133,14 +133,18 @@ int GptSanityCheck(GptData *gpt);
  * Repair GPT data by copying from one set of valid headers/entries to the
  * other.  Assumes GptSanityCheck() has been run to determine which headers
  * and/or entries are already valid.
+ *
+ * On error, returns a GPT_ERROR_* return code.
  */
-void GptRepair(GptData *gpt);
+int GptRepair(GptData *gpt);
 
 /**
  * Called when the primary entries are modified and the CRCs need to be
  * recalculated and propagated to the secondary entries
+ *
+ * On error, returns a GPT_ERROR_* return code.
  */
-void GptModified(GptData *gpt);
+int GptModified(GptData *gpt);
 
 /* Getters and setters for partition attribute fields. */
 

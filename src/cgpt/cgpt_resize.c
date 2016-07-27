@@ -83,7 +83,11 @@ static int resize_partition(CgptResizeParams *params, blkid_dev dev) {
   }
 
   // If either table is bad fix it! (likely if disk was extended)
-  GptRepair(&drive.gpt);
+  if (GPT_SUCCESS != (gpt_retval = GptRepair(&drive.gpt))) {
+    Error("GptRepair() returned %d: %s\n",
+          gpt_retval, GptError(gpt_retval));
+    goto nope;
+  }
 
   header = (GptHeader*)drive.gpt.primary_header;
   last_free_lba = header->last_usable_lba;
