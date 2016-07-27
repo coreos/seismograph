@@ -26,8 +26,7 @@ int GptInit(GptData *gpt)
 		return retval;
 	}
 
-	GptRepair(gpt);
-	return GPT_SUCCESS;
+	return GptRepair(gpt);
 }
 
 int GptNextKernelEntry(GptData *gpt, uint64_t *start_sector, uint64_t *size)
@@ -161,7 +160,7 @@ int GptUpdateKernelEntry(GptData *gpt, uint32_t update_type)
 	}
 
 	if (modified) {
-		GptModified(gpt);
+		return GptModified(gpt);
 	}
 
 	return GPT_SUCCESS;

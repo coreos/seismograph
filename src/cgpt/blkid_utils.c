@@ -17,7 +17,7 @@
 /* Find the device id for a given blkid_dev.
  * FIXME: libblkid already has this info but lacks a function to expose it.
  */
-static dev_t dev_to_devno(blkid_dev dev) {
+static int dev_to_devno(blkid_dev dev, dev_t *devno) {
   struct stat dev_stat;
 
   if (stat(blkid_dev_devname(dev), &dev_stat) < 0)
@@ -26,7 +26,8 @@ static dev_t dev_to_devno(blkid_dev dev) {
   if (!S_ISBLK(dev_stat.st_mode))
     return -1;
 
-  return dev_stat.st_rdev;
+  *devno = dev_stat.st_rdev;
+  return 0;
 }
 
 /* Find the whole disk device path for a partition.
@@ -34,7 +35,7 @@ static dev_t dev_to_devno(blkid_dev dev) {
 char * dev_to_wholedevname(blkid_dev dev) {
   dev_t devno, whole;
 
-  if ((devno = dev_to_devno(dev)) < 0)
+  if (dev_to_devno(dev, &devno) < 0)
     return NULL;
 
   if (blkid_devno_to_wholedisk(devno, NULL, 0, &whole) < 0)
@@ -65,9 +66,9 @@ static int devno_to_partno(dev_t devno) {
 
 /* Find the partition number for a given partition. */
 int dev_to_partno(blkid_dev dev) {
-  int devno;
+  dev_t devno;
 
-  if ((devno = dev_to_devno(dev)) < 0)
+  if (dev_to_devno(dev, &devno) < 0)
     return -1;
 
   return devno_to_partno(devno);

@@ -338,21 +338,24 @@ static int GptRecomputeSize(GptData *gpt)
 	return GPT_SUCCESS;
 }
 
-void GptRepair(GptData *gpt)
+int GptRepair(GptData *gpt)
 {
 	GptHeader *header1 = (GptHeader *)(gpt->primary_header);
 	GptHeader *header2 = (GptHeader *)(gpt->secondary_header);
 	GptEntry *entries1 = (GptEntry *)(gpt->primary_entries);
 	GptEntry *entries2 = (GptEntry *)(gpt->secondary_entries);
-	int entries_size;
+	int entries_size, retval;
 
 	/* Need at least one good header and one good set of entries. */
-	if (MASK_NONE == gpt->valid_headers || MASK_NONE == gpt->valid_entries)
-		return;
+	if (MASK_NONE == gpt->valid_headers)
+		return GPT_ERROR_INVALID_HEADERS;
+	if (MASK_NONE == gpt->valid_entries)
+		return GPT_ERROR_INVALID_ENTRIES;
 
 	/* Update whichever header is valid based on disk size. */
-	if (GptRecomputeSize(gpt) != GPT_SUCCESS)
-		return;
+	retval = GptRecomputeSize(gpt);
+	if (retval != GPT_SUCCESS)
+		return retval;
 
 	/* Repair headers if necessary */
 	if (MASK_PRIMARY == gpt->valid_headers) {
@@ -388,6 +391,8 @@ void GptRepair(GptData *gpt)
 		gpt->modified |= GPT_MODIFIED_ENTRIES1;
 	}
 	gpt->valid_entries = MASK_BOTH;
+
+	return GPT_SUCCESS;
 }
 
 int GetEntryLegacyBootable(const GptEntry *e)
@@ -451,7 +456,7 @@ void GetCurrentKernelUniqueGuid(GptData *gpt, void *dest)
 	Memcpy(dest, &e->unique, sizeof(Guid));
 }
 
-void GptModified(GptData *gpt) {
+int GptModified(GptData *gpt) {
 	GptHeader *header = (GptHeader *)gpt->primary_header;
 
 	/* Update the CRCs */
@@ -468,7 +473,7 @@ void GptModified(GptData *gpt) {
 	 */
 	gpt->valid_headers = MASK_PRIMARY;
 	gpt->valid_entries = MASK_PRIMARY;
-	GptRepair(gpt);
+	return GptRepair(gpt);
 }
 
 

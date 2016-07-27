@@ -27,7 +27,12 @@ int CgptRepair(CgptRepairParams *params) {
     printf("GptSanityCheck() returned %d: %s\n",
            gpt_retval, GptError(gpt_retval));
 
-  GptRepair(&drive.gpt);
+  if (GPT_SUCCESS != (gpt_retval = GptRepair(&drive.gpt))) {
+    Error("GptRepair() returned %d: %s\n",
+          gpt_retval, GptError(gpt_retval));
+    return CGPT_FAILED;
+  }
+
   if (drive.gpt.modified & GPT_MODIFIED_HEADER1)
     printf("Primary Header is updated.\n");
   if (drive.gpt.modified & GPT_MODIFIED_ENTRIES1)

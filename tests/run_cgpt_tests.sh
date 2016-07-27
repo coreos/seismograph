@@ -108,6 +108,8 @@ else
   $CGPT boot -p ${DEV} || error
   loop=$(losetup -f --show --partscan ${DEV}) || error
   trap "losetup -d ${loop}" EXIT
+  # wait for udev
+  sleep 1
   loopp1=${loop}p1
   # double check that partitioned loop devices work and have correct size
   [ -b $loopp1 ] || error "$loopp1 is not a block device"
