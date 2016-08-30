@@ -124,7 +124,7 @@ static int resize_partition(CgptResizeParams *params, blkid_dev dev) {
 
   // Update and test partition table in memory
   entry->ending_lba = last_free_lba;
-  entry_size_lba = entry->ending_lba - entry->starting_lba;
+  entry_size_lba = entry->ending_lba - entry->starting_lba + 1;
   UpdateAllEntries(&drive);
   gpt_retval = CheckEntries((GptEntry*)drive.gpt.primary_entries,
                             (GptHeader*)drive.gpt.primary_header);
