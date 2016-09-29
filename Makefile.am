@@ -64,7 +64,7 @@ loopy_LDADD = $(MNT_LIBS)
 
 librootdev_la_SOURCES = src/rootdev/rootdev.c
 librootdev_la_CFLAGS = -Wall -Werror -std=gnu99
-librootdev_la_LDFLAGS = -export-symbols-regex '^rootdev_' \
+librootdev_la_LDFLAGS = -export-symbols-regex '^rootdev' \
 			-version-info 1:0:0
 
 rootdev_SOURCES = src/rootdev/main.c

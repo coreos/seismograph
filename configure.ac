@@ -12,7 +12,7 @@ AC_SYS_LARGEFILE
 AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules subdir-objects])
 AM_SILENT_RULES([yes])
 
-LT_INIT
+LT_INIT([disable-static])
 
 # Checks for programs.
 AC_PROG_CC
