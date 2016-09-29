@@ -14,8 +14,12 @@ AM_CFLAGS = -Wall -Werror \
 	    -fvisibility=hidden \
 	    -std=gnu99
 
-bin_PROGRAMS = cgpt loopy e2size rootdev
+bin_PROGRAMS = cgpt e2size rootdev
 lib_LTLIBRARIES = librootdev.la
+
+if ENABLE_LOOPY
+bin_PROGRAMS += loopy
+endif
 
 rootdevincludedir = $(includedir)/rootdev
 rootdevinclude_HEADERS = include/rootdev/rootdev.h
@@ -55,8 +59,7 @@ cgpt_LDADD = $(BLKID_LIBS) $(UUID_LIBS)
 e2size_SOURCES = src/e2size/e2size.c
 e2size_LDADD = $(EXT2FS_LIBS)
 
-loopy_SOURCES = \
-	src/loopy/loopy.c
+loopy_SOURCES = src/loopy/loopy.c
 loopy_LDADD = $(MNT_LIBS)
 
 librootdev_la_SOURCES = src/rootdev/rootdev.c
