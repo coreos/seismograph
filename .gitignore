@@ -1,8 +1,10 @@
+*.lo
 *.log
 *.o
 *.trs
 .deps/
 .dirstamp
+.libs/
 /Makefile
 /Makefile.in
 /aclocal.m4
@@ -13,6 +15,12 @@
 /config.log
 /config.status
 /configure
+/e2size
+/librootdev.la
+/libtool
+/loopy
+/m4/
+/rootdev
 /tests/cgpt_test_dir/
 /utility_string_tests
 /utility_tests

@@ -4,12 +4,15 @@
 AC_PREREQ([2.68])
 AC_INIT([seismograph], [0], [https://github.com/coreos/seismograph/issues])
 AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIRS([m4])
 AC_CONFIG_SRCDIR([src/cgpt/cgpt.c])
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
 
 AM_INIT_AUTOMAKE([foreign 1.11 -Wall -Wno-portability silent-rules subdir-objects])
 AM_SILENT_RULES([yes])
+
+LT_INIT
 
 # Checks for programs.
 AC_PROG_CC

@@ -5,7 +5,7 @@
  * Implements root device discovery via sysfs with optional bells and whistles.
  */
 
-#include "rootdev.h"
+#include "rootdev/rootdev.h"
 
 #include <ctype.h>
 #include <dirent.h>

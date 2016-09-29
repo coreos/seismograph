@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "rootdev.h"
+#include "rootdev/rootdev.h"
 
 static void print_help(const char *progname) {
   fprintf(stderr,

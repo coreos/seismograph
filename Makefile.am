@@ -1,3 +1,4 @@
+ACLOCAL_AMFLAGS = -I m4
 AM_MAKEFLAGS = --no-print-directory
 # remove targets if the command fails
 .DELETE_ON_ERROR:
@@ -7,12 +8,17 @@ EXTRA_DIST =
 AM_CPPFLAGS = -I$(srcdir)/src/firmware/include \
 	      -I$(srcdir)/src/firmware/lib/include \
 	      -I$(srcdir)/src/firmware/lib/cgptlib/include \
-	      -I$(srcdir)/src/host/include
+	      -I$(srcdir)/src/host/include \
+	      -I$(srcdir)/include
 AM_CFLAGS = -Wall -Werror \
 	    -fvisibility=hidden \
 	    -std=gnu99
 
-bin_PROGRAMS = cgpt loopy e2size
+bin_PROGRAMS = cgpt loopy e2size rootdev
+lib_LTLIBRARIES = librootdev.la
+
+rootdevincludedir = $(includedir)/rootdev
+rootdevinclude_HEADERS = include/rootdev/rootdev.h
 
 cgpt_SOURCES = \
 	src/cgpt/blkid_utils.c \
@@ -52,6 +58,14 @@ e2size_LDADD = $(EXT2FS_LIBS)
 loopy_SOURCES = \
 	src/loopy/loopy.c
 loopy_LDADD = $(MNT_LIBS)
+
+librootdev_la_SOURCES = src/rootdev/rootdev.c
+librootdev_la_CFLAGS = -Wall -Werror -std=gnu99
+librootdev_la_LDFLAGS = -export-symbols-regex '^rootdev_' \
+			-version-info 1:0:0
+
+rootdev_SOURCES = src/rootdev/main.c
+rootdev_LDADD = librootdev.la
 
 check_PROGRAMS = cgptlib_test \
 		 utility_string_tests \
