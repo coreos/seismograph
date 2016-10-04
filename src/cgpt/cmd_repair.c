@@ -58,6 +58,12 @@ int cmd_repair(int argc, char *argv[]) {
     return CGPT_FAILED;
   }
 
+  if (optind >= argc)
+  {
+    Error("missing drive argument\n");
+    return CGPT_FAILED;
+  }
+
   params.drive_name = strdup(argv[optind]);
 
   r = translate_partition_dev(&params.drive_name, &partition);
