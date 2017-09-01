@@ -610,6 +610,7 @@ const Guid guid_unused =            GPT_ENT_TYPE_UNUSED;
 const Guid guid_coreos_reserved =   GPT_ENT_TYPE_COREOS_RESERVED;
 const Guid guid_coreos_resize =     GPT_ENT_TYPE_COREOS_RESIZE;
 const Guid guid_coreos_rootfs =     GPT_ENT_TYPE_COREOS_ROOTFS;
+const Guid guid_coreos_root_raid =  GPT_ENT_TYPE_COREOS_ROOT_RAID;
 const Guid guid_mswin_data =        GPT_ENT_TYPE_MSWIN_DATA;
 
 static struct {
@@ -647,6 +648,7 @@ static struct {
   {&guid_coreos_rootfs, "coreos-rootfs", "CoreOS rootfs"},
   {&guid_coreos_resize, "coreos-resize", "CoreOS auto-resize"},
   {&guid_coreos_reserved, "coreos-reserved", "CoreOS reserved"},
+  {&guid_coreos_root_raid, "coreos-root-raid", "CoreOS RAID containing root"},
 };
 
 /* Resolves human-readable GPT type.
