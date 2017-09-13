@@ -105,7 +105,7 @@ int UTF16ToUTF8(const uint16_t *utf16, unsigned int maxinput,
 int UTF8ToUTF16(const uint8_t *utf8, uint16_t *utf16, unsigned int maxoutput);
 
 /* Helper functions for supported GPT types. */
-int ResolveType(const Guid *type, char *buf);
+int ResolveType(const Guid *type, char *buf, size_t len);
 int SupportedType(const char *name, Guid *type);
 void PrintTypes(void);
 void EntryDetails(GptEntry *entry, uint32_t index, int raw);

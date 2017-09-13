@@ -654,11 +654,14 @@ static struct {
 /* Resolves human-readable GPT type.
  * Returns CGPT_OK if found.
  * Returns CGPT_FAILED if no known type found. */
-int ResolveType(const Guid *type, char *buf) {
+int ResolveType(const Guid *type, char *buf, size_t len) {
   int i;
   for (i = 0; i < ARRAY_COUNT(supported_types); ++i) {
     if (!memcmp(type, supported_types[i].type, sizeof(Guid))) {
-      strcpy(buf, supported_types[i].description);
+      strncpy(buf, supported_types[i].description, len);
+      if (len > 0) {
+        buf[len-1] = '\0';
+      }
       return CGPT_OK;
     }
   }
