@@ -107,7 +107,7 @@ void EntryDetails(GptEntry *entry, uint32_t index, int raw) {
     printf(PARTITION_FMT, entry->starting_lba,
            (entry->ending_lba - entry->starting_lba + 1U),
            index+1, contents);
-    if (CGPT_OK == ResolveType(&entry->type, type)) {
+    if (CGPT_OK == ResolveType(&entry->type, type, GUID_STRLEN)) {
       printf(PARTITION_MORE, "Type: ", type);
     } else {
       GuidToStr(&entry->type, type, GUID_STRLEN);
@@ -281,7 +281,7 @@ int CgptShow(CgptShowParams *params) {
       if (GuidIsZero(&entry->type))
         continue;
 
-      if (!params->numeric && CGPT_OK == ResolveType(&entry->type, type)) {
+      if (!params->numeric && CGPT_OK == ResolveType(&entry->type, type, GUID_STRLEN)) {
       } else {
         GuidToStr(&entry->type, type, GUID_STRLEN);
       }
