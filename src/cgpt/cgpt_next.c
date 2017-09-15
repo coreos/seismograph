@@ -42,6 +42,7 @@ static int do_search(CgptNextParams *params) {
 
     if (next_index == -1 || ((priority > next_priority) && (successful || tries))) {
       strncpy(next_file_name, params->drive_name, BUFSIZE);
+      next_file_name[BUFSIZE - 1] = '\0';
       if (successful || tries) {
         next_priority = priority;
       } else {
