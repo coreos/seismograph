@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -92,7 +93,6 @@ static int match_sysfs_device(char *name, size_t name_len,
   size_t basedir_len;
   DIR *dirp = NULL;
   struct dirent *entry = NULL;
-  struct dirent *next = NULL;
   char *working_path = NULL;
   long working_path_size = 0;
 
@@ -138,7 +138,7 @@ static int match_sysfs_device(char *name, size_t name_len,
     return found;
   }
 
-  while (readdir_r(dirp, entry, &next) == 0 && next) {
+  while ((entry = readdir(dirp)) != NULL) {
     size_t candidate_len = strlen(entry->d_name);
     size_t path_len = 0;
     dev_t found_devt = 0;
