@@ -129,15 +129,6 @@ static int match_sysfs_device(char *name, size_t name_len,
     return found;
   }
 
-  /* Allocate a properly sized entry. */
-  entry = malloc(offsetof(struct dirent, d_name) + working_path_size);
-  if (!entry) {
-    warn("malloc(dirent)");
-    free(working_path);
-    closedir(dirp);
-    return found;
-  }
-
   while ((entry = readdir(dirp)) != NULL) {
     size_t candidate_len = strlen(entry->d_name);
     size_t path_len = 0;
@@ -187,7 +178,6 @@ static int match_sysfs_device(char *name, size_t name_len,
   }
 
   free(working_path);
-  free(entry);
   closedir(dirp);
   return found;
 }
