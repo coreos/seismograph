@@ -334,8 +334,9 @@ int rootdev_create_devices(const char *name, dev_t dev, bool symlink) {
 
 int rootdev_get_path(char *path, size_t size, const char *device,
                      dev_t dev, const char *dev_path) {
-  int path_len;
+  int path_len, dev_len;
   struct stat dev_statbuf;
+  char *s, *tmp_dev;
 
   if (!dev_path)
     dev_path = kDefaultDevPath;
@@ -343,8 +344,18 @@ int rootdev_get_path(char *path, size_t size, const char *device,
   if (!path || !size || !device)
     return -1;
 
-  path_len = snprintf(path, size, "%s/%s", dev_path, device);
-  if (path_len != strlen(dev_path) + 1 + strlen(device))
+  dev_len = strlen(device);
+  tmp_dev = strdup(device);
+  if (!tmp_dev)
+    return -1;
+
+  if (strchr(tmp_dev, '!') != NULL)
+    while ((s = strchr(tmp_dev, '!')))
+      s[0] = '/';
+
+  path_len = snprintf(path, size, "%s/%s", dev_path, tmp_dev);
+  free(tmp_dev);
+  if (path_len != strlen(dev_path) + 1 + dev_len)
     return -1;
 
   if (stat(path, &dev_statbuf) != 0)
