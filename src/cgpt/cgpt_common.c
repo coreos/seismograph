@@ -1144,7 +1144,7 @@ char *IsWholeDev(const char *basename) {
   int i,j,len;
   struct stat statbuf;
   static char pathname[BUFSIZE];        // we'll return this.
-  char tmpname[BUFSIZE];
+  char tmpname[BUFSIZE + 18];           // add sizeof(SYS_BLOCK_DIR"//device")
   char tbasename[BUFSIZE];
 
   // It should be a block device under /dev/,
@@ -1165,7 +1165,8 @@ char *IsWholeDev(const char *basename) {
         tbasename[j] = basename[j] == '/' ? '!' : basename[j];
     }
     tbasename[j] = 0;
-    snprintf(tmpname, BUFSIZE, "%s/%s/device", SYS_BLOCK_DIR, tbasename);
+    snprintf(tmpname, sizeof(tmpname),
+             "%s/%s/device", SYS_BLOCK_DIR, tbasename);
 
     if (0 != lstat(tmpname, &statbuf))
       continue;
